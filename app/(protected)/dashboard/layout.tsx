@@ -1,5 +1,6 @@
 @@ .. @@
    return (
+   )
 -    <div className="h-screen flex bg-white overflow-hidden">
 +    <div className="h-screen flex bg-gradient-to-br from-gray-50 to-white overflow-hidden">
        {/* Sidebar Navigation */}

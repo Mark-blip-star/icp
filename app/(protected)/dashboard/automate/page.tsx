@@ -3,6 +3,8 @@
    if (hasCredentials === false && !isLoading && !isDemo) {
      console.log("🔗 Rendering LinkedIn connection interface");
      return (
+     )
+   }
 -      <div className="min-h-screen bg-white flex items-center justify-center px-4">
 -        <div className="w-full max-w-4xl">
 -          <div className="text-center mb-8">

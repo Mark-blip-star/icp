@@ -1,5 +1,6 @@
 @@ .. @@
    return (
+   )
 -    <div className="h-full flex flex-col overflow-hidden bg-white rounded-2xl shadow-sm border border-black/5">
 -      <div className="w-full flex flex-col sm:flex-row items-start sm:items-center py-2 px-4 flex-shrink-0 gap-6">
 -        <div className="flex flex-col min-w-[180px]">
@@ -21,6 +22,8 @@
 @@ .. @@
        </div>
        {error && (
+)
+}
 -        <div className="text-gray-600 text-sm p-4 bg-gray-50 border-b border-gray-100 font-outfit text-center">
 -          <p className="font-medium mb-1">Metrics temporarily unavailable</p>
 -          <p className="text-xs text-gray-500">Please try refreshing the page</p>
@@ -38,6 +41,8 @@
 @@ .. @@
  function Card({ label, children }: CardProps) {
    return (
+   )
+ }
 -    <div className="flex flex-col items-center justify-center gap-1">
 -      <h3 className="text-sm font-medium text-gray-600 font-outfit text-center mb-1">{label}</h3>
 -      <p className="text-xl font-bold text-black tracking-tight font-space-grotesk-bold text-center mt-1">{children}</p>
