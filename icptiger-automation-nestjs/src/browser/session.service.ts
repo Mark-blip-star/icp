@@ -33,7 +33,6 @@ export class SessionService {
       const browser = await this.puppeteerService.launchBrowser();
       const page = await this.puppeteerService.createPage(browser);
       
-      // Add browser event listeners to track when it closes
       browser.on('disconnected', () => {
         console.log(`[${userId}] Browser disconnected unexpectedly`);
       });
@@ -46,10 +45,8 @@ export class SessionService {
         console.log(`[${userId}] Page closed unexpectedly`);
       });
       
-      // Create CDP session for screencast
       const clientSession = await page.target().createCDPSession();
       
-      // Block images & media for performance (like in old backend)
       await page.setRequestInterception(true);
       page.on("request", (req) => {
         const blocked = ["image", "media"];
@@ -60,9 +57,6 @@ export class SessionService {
         waitUntil: 'networkidle2',
         timeout: 60000,
       });
-
-      // Temporarily disable cleanup script to test basic functionality
-      // await this.injectCleanupScript(page, userId);
 
       const sessionId = `${userId}_${Date.now()}`;
       const sessionInfo: BrowserSessionInfo = {
@@ -78,7 +72,6 @@ export class SessionService {
 
       this.sessions.set(userId, sessionInfo);
 
-            // Listen for navigation to detect login success
       page.on('framenavigated', async (frame) => {
         if (frame !== page.mainFrame()) return;
         
@@ -86,29 +79,17 @@ export class SessionService {
         console.log(`[${userId}] Navigation: ${url}`);
         
         if (url.includes('/feed') || url.includes('/mynetwork') || url.includes('/jobs')) {
-          // User successfully logged in
           sessionInfo.isLoggedIn = true;
           console.log(`[${userId}] Login success detected: ${url}`);
           
-          // Save updated cookies to database
           await this.saveLinkedInCookies(userId, sessionInfo.page);
           
-          // Call login success callback if set
           if (sessionInfo.onLoginSuccess) {
             sessionInfo.onLoginSuccess();
           }
         }
-        // Temporarily disable re-injection to avoid interference
-        // else {
-        //   // Re-inject cleanup on navigation (like in old backend)
-        //   setTimeout(() => this.injectCleanupScript(page, userId), 200);
-        // }
       });
 
-      // CDP screencast will be started by the websocket gateway
-      // We just store the clientSession for later use
-
-      // Cleanup session after 20 minutes
       setTimeout(() => {
         this.cleanupSession(userId);
       }, 20 * 60 * 1000);
@@ -149,9 +130,6 @@ export class SessionService {
 
       if (liAt) {
         console.log(`[${userId}] Saving updated LinkedIn cookies to database`);
-        
-        // Здесь нужно будет добавить SupabaseService для сохранения в БД
-        // Пока просто логируем
         console.log(`[${userId}] li_at cookie: ${liAt.substring(0, 20)}...`);
         if (liA) {
           console.log(`[${userId}] li_a cookie: ${liA.substring(0, 20)}...`);
@@ -162,52 +140,7 @@ export class SessionService {
     }
   }
 
-  private async injectCleanupScript(page: Page, userId: string): Promise<void> {
-    try {
-      // Cleanup selectors from old backend - more conservative approach
-      const cleanupSelectors = [
-        "header",
-        "footer", 
-        ".join-now",
-        ".alternate-signin-container",
-        ".google-one-tap-module__outline",
-        "#credential_picker_container",
-        ".forgot-password",
-      ];
 
-      // Wait a bit for page to load before injecting
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // First, let's check what elements exist before removing
-      const elementCounts = await page.evaluate((selectors) => {
-        const counts: { [key: string]: number } = {};
-        selectors.forEach((sel: string) => {
-          counts[sel] = (globalThis as any).document.querySelectorAll(sel).length;
-        });
-        return counts;
-      }, cleanupSelectors);
-
-      console.log(`[${userId}] Elements found before cleanup:`, elementCounts);
-
-      // Only inject if we're on login page
-      const currentUrl = page.url();
-      if (currentUrl.includes('/login')) {
-        await page.evaluate((selectors) => {
-          selectors.forEach((sel: string) => {
-            const elements = (globalThis as any).document.querySelectorAll(sel);
-            console.log(`Removing ${elements.length} elements with selector: ${sel}`);
-            elements.forEach((el: any) => el.remove());
-          });
-        }, cleanupSelectors);
-
-        console.log(`[${userId}] Cleanup script injected successfully on login page`);
-      } else {
-        console.log(`[${userId}] Skipping cleanup - not on login page: ${currentUrl}`);
-      }
-    } catch (error) {
-      console.error(`[${userId}] Error injecting cleanup script:`, error);
-    }
-  }
 
   async getOrCreateSession(userId: string): Promise<BrowserSessionInfo> {
     let session = await this.getSession(userId);

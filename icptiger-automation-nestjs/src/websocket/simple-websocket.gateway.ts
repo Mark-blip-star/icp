@@ -55,24 +55,19 @@ export class SimpleWebsocketGateway
       userId,
     });
 
-    // Check if user has existing session
     const hasSession = await this.linkedInAutomationService.hasActiveSession(userId);
     
     if (hasSession) {
-      // Re-attach to existing session
       const session = await this.linkedInAutomationService.getSessionInfo(userId);
       this.logger.log(`[${userId}] Found existing session, current URL: ${session?.page?.url()}`);
       
-      // Emit readyForLogin if session exists
       client.emit('readyForLogin', {
         message: 'LinkedIn session already active, ready for interaction',
         url: session?.page?.url(),
       });
       
-      // Start CDP screencast
       await this.startCDPScreencast(userId, client);
     } else {
-      // Start a fresh login flow
       this.logger.log(`[${userId}] No existing session found, starting fresh login flow`);
       try {
         await this.linkedInAutomationService.runWithLogin(
@@ -81,13 +76,11 @@ export class SimpleWebsocketGateway
           async ({ page }) => {
             this.logger.log(`[${userId}] LinkedIn login page loaded and ready`);
             
-            // Emit ready event to frontend
             client.emit('readyForLogin', {
               message: 'LinkedIn login page loaded, ready for user interaction',
               url: page.url(),
             });
             
-            // Start CDP screencast
             await this.startCDPScreencast(userId, client);
           }
         );
@@ -108,7 +101,6 @@ export class SimpleWebsocketGateway
       this.userSockets.delete(userId);
       this.logger.log(`[${userId}] User disconnected`);
       
-      // Stop CDP screencast
       await this.stopCDPScreencast(userId, client);
     }
   }
@@ -129,16 +121,13 @@ export class SimpleWebsocketGateway
     this.logger.log(`[${userId}] Start login requested`);
 
     try {
-      // Check if session already exists
       const hasSession = await this.linkedInAutomationService.hasActiveSession(userId);
       
       if (hasSession) {
-        // Reuse existing session
         const session = await this.linkedInAutomationService.getSessionInfo(userId);
         if (session && session.page) {
           this.logger.log(`[${userId}] Reusing existing session, URL: ${session.page.url()}`);
           
-          // Set up login success callback
           this.linkedInAutomationService.setLoginSuccessCallback(userId, () => {
             client.emit('loginSuccess', { 
               message: 'Successfully logged in to LinkedIn',
@@ -146,24 +135,20 @@ export class SimpleWebsocketGateway
             });
           });
           
-          // Start CDP screencast for existing session
           await this.startCDPScreencast(userId, client);
           
-          // Hide the ready overlay by not emitting readyForLogin
           client.emit('loginStarted', {
             message: 'LinkedIn login session started',
             url: session.page.url(),
           });
         }
       } else {
-        // Create new session
         await this.linkedInAutomationService.runWithLogin(
           { id: 'temp', status: 'active', user_id: userId } as any,
           { user_id: userId } as any,
           async ({ page }) => {
             this.logger.log(`[${userId}] LinkedIn login page loaded and ready`);
             
-            // Set up login success callback
             this.linkedInAutomationService.setLoginSuccessCallback(userId, () => {
               client.emit('loginSuccess', { 
                 message: 'Successfully logged in to LinkedIn',
@@ -171,10 +156,8 @@ export class SimpleWebsocketGateway
               });
             });
             
-            // Start CDP screencast
             await this.startCDPScreencast(userId, client);
             
-            // Hide the ready overlay by not emitting readyForLogin
             client.emit('loginStarted', {
               message: 'LinkedIn login session started',
               url: page.url(),
@@ -257,16 +240,13 @@ export class SimpleWebsocketGateway
         console.log(`[${userId}] Executing mouse action: ${event.type} at (${event.x}, ${event.y})`);
         
         try {
-          // Сначала двигаем мышь
           await session.page.mouse.move(event.x, event.y);
           console.log(`[${userId}] Mouse moved to (${event.x}, ${event.y})`);
           
-          // Если это клик, то кликаем
           if (event.type === "click") {
             await session.page.mouse.click(event.x, event.y);
             console.log(`[${userId}] Mouse clicked at (${event.x}, ${event.y})`);
             
-            // Проверим, что находится в этой точке
             try {
               const elementAtPoint = await session.page.evaluate((x, y) => {
                 const element = document.elementFromPoint(x, y);
@@ -287,7 +267,6 @@ export class SimpleWebsocketGateway
               console.log(`[${userId}] Error evaluating element at point:`, evalError.message);
             }
             
-            // Попробуем установить фокус на активный элемент
             try {
               await session.page.evaluate(() => {
                 const activeElement = document.activeElement as HTMLElement;
@@ -300,18 +279,15 @@ export class SimpleWebsocketGateway
               console.log(`[${userId}] Focus error:`, focusError.message);
             }
             
-            // Попробуем кликнуть по селекторам, если координаты не работают
             try {
               const elementAtPoint = await session.page.evaluate((x, y) => {
                 const element = document.elementFromPoint(x, y);
                 return element ? element.tagName : null;
               }, event.x, event.y);
               
-              // Если клик не попал на нужный элемент, попробуем найти его по селекторам
               if (elementAtPoint !== 'INPUT' && elementAtPoint !== 'BUTTON') {
                 console.log(`[${userId}] Click didn't hit target element, trying selectors...`);
                 
-                // Попробуем найти поле пароля
                 const passwordField = await session.page.$('input[type="password"]');
                 if (passwordField) {
                   const box = await passwordField.boundingBox();
@@ -320,7 +296,6 @@ export class SimpleWebsocketGateway
                     const centerY = box.y + box.height / 2;
                     console.log(`[${userId}] Found password field at (${centerX}, ${centerY})`);
                     
-                    // Если клик был примерно в области пароля, кликнем по центру поля
                     if (Math.abs(event.x - centerX) < 100 && Math.abs(event.y - centerY) < 50) {
                       await session.page.mouse.click(centerX, centerY);
                       console.log(`[${userId}] Clicked on password field center`);
@@ -328,7 +303,6 @@ export class SimpleWebsocketGateway
                   }
                 }
                 
-                // Попробуем найти кнопку Sign in
                 const signInButton = await session.page.$('button[type="submit"]');
                 if (signInButton) {
                   const box = await signInButton.boundingBox();
@@ -337,7 +311,6 @@ export class SimpleWebsocketGateway
                     const centerY = box.y + box.height / 2;
                     console.log(`[${userId}] Found sign in button at (${centerX}, ${centerY})`);
                     
-                    // Если клик был примерно в области кнопки, кликнем по центру
                     if (Math.abs(event.x - centerX) < 100 && Math.abs(event.y - centerY) < 50) {
                       await session.page.mouse.click(centerX, centerY);
                       console.log(`[${userId}] Clicked on sign in button center`);
@@ -351,7 +324,6 @@ export class SimpleWebsocketGateway
           }
         } catch (mouseError) {
           console.error(`[${userId}] Mouse action failed:`, mouseError);
-          // Если страница закрылась, попробуем пересоздать сессию
           if (mouseError.message.includes('Session closed') || mouseError.message.includes('page has been closed')) {
             console.log(`[${userId}] Page was closed, attempting to recreate session...`);
             await this.recreateSession(userId, client);
@@ -409,7 +381,6 @@ export class SimpleWebsocketGateway
           }
         } catch (keyboardError) {
           console.error(`[${userId}] Keyboard action failed:`, keyboardError);
-          // Если страница закрылась, попробуем пересоздать сессию
           if (keyboardError.message.includes('Session closed') || keyboardError.message.includes('page has been closed')) {
             console.log(`[${userId}] Page was closed during keyboard event, attempting to recreate session...`);
             await this.recreateSession(userId, client);
@@ -531,21 +502,16 @@ export class SimpleWebsocketGateway
         return;
       }
 
-      // Check if screencast is already running
       const isScreencastRunning = (session as any).screencastRunning;
       if (isScreencastRunning) {
         console.log(`[${userId}] Screencast already running, skipping...`);
         return;
       }
 
-      // Set up CDP screencast frame handler (only once)
       if (!session.clientSession._screencastHandlerSet) {
         session.clientSession.on('Page.screencastFrame', async ({ data, sessionId }) => {
           try {
-            // Send frame data to client
             client.emit('screencast', data);
-            
-            // Acknowledge frame to CDP
             await session.clientSession.send('Page.screencastFrameAck', { sessionId });
           } catch (error) {
             this.logger.error(`[${userId}] Error handling screencast frame:`, error);
@@ -555,14 +521,12 @@ export class SimpleWebsocketGateway
         console.log(`[${userId}] Screencast frame handler set up`);
       }
 
-      // Start CDP screencast
       await session.clientSession.send('Page.startScreencast', {
         format: 'jpeg',
         quality: 80,
         everyNthFrame: 1,
       });
 
-      // Mark screencast as running
       (session as any).screencastRunning = true;
 
       this.logger.log(`[${userId}] CDP screencast started`);
@@ -576,7 +540,6 @@ export class SimpleWebsocketGateway
       const session = await this.linkedInAutomationService.getSessionInfo(userId);
       if (session && session.clientSession) {
         await session.clientSession.send('Page.stopScreencast');
-        // Reset screencast flag
         (session as any).screencastRunning = false;
         this.logger.log(`[${userId}] CDP screencast stopped`);
       }
@@ -589,17 +552,14 @@ export class SimpleWebsocketGateway
     try {
       console.log(`[${userId}] Recreating session...`);
       
-      // Close existing session
       await this.linkedInAutomationService.closeSession(userId);
       
-      // Create new session
       await this.linkedInAutomationService.runWithLogin(
         { id: 'temp', status: 'active', user_id: userId } as any,
         { user_id: userId } as any,
         async ({ page }) => {
           console.log(`[${userId}] New session created, URL: ${page.url()}`);
           
-          // Set up login success callback
           this.linkedInAutomationService.setLoginSuccessCallback(userId, () => {
             client.emit('loginSuccess', { 
               message: 'Successfully logged in to LinkedIn',
@@ -607,10 +567,8 @@ export class SimpleWebsocketGateway
             });
           });
           
-          // Start CDP screencast
           await this.startCDPScreencast(userId, client);
           
-          // Emit ready event
           client.emit('loginStarted', {
             message: 'LinkedIn session recreated and ready',
             url: page.url(),
