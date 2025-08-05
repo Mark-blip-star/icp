@@ -47,11 +47,12 @@ export class SessionService {
       
       const clientSession = await page.target().createCDPSession();
       
-      await page.setRequestInterception(true);
-      page.on("request", (req) => {
-        const blocked = ["image", "media"];
-        blocked.includes(req.resourceType()) ? req.abort() : req.continue();
-      });
+      // Don't block images and media for better user experience during login
+      // await page.setRequestInterception(true);
+      // page.on("request", (req) => {
+      //   const blocked = ["image", "media"];
+      //   blocked.includes(req.resourceType()) ? req.abort() : req.continue();
+      // });
       
       await page.goto('https://www.linkedin.com/login', {
         waitUntil: 'networkidle2',

@@ -1,4 +1,4 @@
-import { Controller, Post, Get, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, HttpException, HttpStatus, Body } from '@nestjs/common';
 import { SchedulerService } from '../../scheduler/scheduler.service';
 
 @Controller('api/scheduler')
@@ -87,6 +87,41 @@ export class SchedulerController {
         {
           success: false,
           message: 'Failed to trigger pending jobs processing',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post('trigger/linkedin-login')
+  async triggerLinkedInLogin(@Body() body: { userId: string }) {
+    try {
+      const { userId } = body;
+      
+      if (!userId) {
+        throw new HttpException(
+          {
+            success: false,
+            message: 'User ID is required',
+          },
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      const sessionId = `${userId}_${Date.now()}`;
+      
+      return {
+        success: true,
+        sessionId,
+        message: 'LinkedIn login session created successfully',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Failed to create LinkedIn login session',
           error: error.message,
         },
         HttpStatus.INTERNAL_SERVER_ERROR

@@ -399,6 +399,41 @@ export class SimpleWebsocketGateway
     }
   }
 
+  @SubscribeMessage('scroll')
+  async handleScrollEvent(
+    @MessageBody() event: any,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const query = client.handshake.query as any;
+    const userId = query.user_id as string;
+
+    if (!userId) return;
+
+    this.logger.log(`[${userId}] Scroll event: ${event.type} - ${event.deltaY}`);
+    console.log(`[${userId}] Scroll event received:`, event);
+
+    try {
+      const session = await this.linkedInAutomationService.getSessionInfo(userId);
+      
+      if (session && session.page && !session.page.isClosed()) {
+        try {
+          if (event.type === "wheel") {
+            await session.page.evaluate((deltaY) => {
+              window.scrollBy(0, deltaY);
+            }, event.deltaY);
+            console.log(`[${userId}] Scrolled by: ${event.deltaY}`);
+          }
+        } catch (scrollError) {
+          console.error(`[${userId}] Scroll action failed:`, scrollError);
+        }
+      } else {
+        console.log(`[${userId}] No session, page, or page is closed for scroll event`);
+      }
+    } catch (error) {
+      this.logger.error(`[${userId}] Scroll event error:`, error);
+    }
+  }
+
   @SubscribeMessage('getScreenshot')
   async handleGetScreenshot(
     @MessageBody() data: any,

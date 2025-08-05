@@ -203,7 +203,8 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
       // Dispatch custom event
       window.dispatchEvent(new Event("linkedInCredentialsChanged"));
 
-      router.push("/dashboard/automate");
+      // Refresh the page to update the UI
+      window.location.reload();
     } catch (error) {
       console.error("Error disconnecting LinkedIn account:", error);
       setLoading(false);

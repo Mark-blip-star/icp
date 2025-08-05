@@ -26,7 +26,7 @@ export class PuppeteerService implements OnModuleInit {
       }
 
       const browserOptions = {
-        headless: config.headless ?? true,
+        headless: config.headless ?? false, // Show browser for better UX
         executablePath: config.executablePath,
         args: [
           '--no-sandbox',
@@ -42,8 +42,8 @@ export class PuppeteerService implements OnModuleInit {
           '--disable-renderer-backgrounding',
         ],
         defaultViewport: {
-          width: config.defaultViewport?.width ?? 1280,
-          height: config.defaultViewport?.height ?? 800,
+          width: config.defaultViewport?.width ?? 1920,
+          height: config.defaultViewport?.height ?? 1080,
         },
       };
 
@@ -66,6 +66,13 @@ export class PuppeteerService implements OnModuleInit {
       }
 
       const page = await targetBrowser.newPage();
+      
+      // Set larger viewport for better user experience
+      await page.setViewport({
+        width: 1920,
+        height: 1080,
+        deviceScaleFactor: 1,
+      });
       
       await page.setUserAgent(
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'

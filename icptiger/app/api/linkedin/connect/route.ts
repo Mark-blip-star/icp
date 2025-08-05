@@ -123,6 +123,18 @@ export async function POST(request: NextRequest) {
     // Verify credentials
     const verificationResult = await verifyLinkedInCredentials(accountRecord);
 
+    // Update profile to mark LinkedIn as connected
+    const { error: profileUpdateError } = await supabase
+      .from("profiles")
+      .update({ linkedin_connected: true })
+      .eq("id", user.id);
+
+    if (profileUpdateError) {
+      console.error("Error updating profile linkedin_connected status:", profileUpdateError);
+    } else {
+      console.log("✅ Updated profile linkedin_connected to true");
+    }
+
     // LinkedIn account verification completed
     // Call external login API
     if (LOGIN_API_BASE) {

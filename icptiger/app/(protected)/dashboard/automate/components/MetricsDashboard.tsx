@@ -182,7 +182,7 @@ function Card({ label, children }: CardProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-1">
       <h3 className="text-sm font-medium text-gray-600 font-outfit text-center mb-1">{label}</h3>
-      <p className="text-xl font-bold text-black tracking-tight font-space-grotesk-bold text-center mt-1">{children}</p>
+      <div className="text-xl font-bold text-black tracking-tight font-space-grotesk-bold text-center mt-1">{children}</div>
     </div>
   );
 }

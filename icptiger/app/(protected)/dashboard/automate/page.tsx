@@ -203,7 +203,7 @@ export default function LinkedInAutomationPage() {
     };
   }, []);
 
-  const handleToggleCampaign = async (id: string, status?: "queued" | "active" | "paused" | "completed", startDate?: string) => {
+  const handleToggleCampaign = async (id: string, status?: string, startDate?: string) => {
   if (!status || !startDate) {
     toast.error("Unable to update campaign: missing status or start date.");
     console.error("handleToggleCampaign called without status or startDate", { id, status, startDate });
@@ -750,18 +750,8 @@ export default function LinkedInAutomationPage() {
   if (hasCredentials === false && !isLoading && !isDemo) {
     console.log("🔗 Rendering LinkedIn connection interface");
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-4">
-        <div className="w-full max-w-4xl">
-          <div className="text-center mb-8">
-            <h1 className="font-recoleta text-xl sm:text-2xl md:text-3xl font-black mb-3 tracking-tight leading-tight text-center">
-              Connect Your <span className="text-[#0A66C2]">LinkedIn</span>
-            </h1>
-            <p className="font-outfit font-light text-sm sm:text-base text-center max-w-2xl mx-auto text-black/60 leading-relaxed">
-              Log in directly to LinkedIn through our secure flow.
-            </p>
-          </div>
-          <LinkedInConnect />
-        </div>
+      <div className="min-h-screen bg-white">
+        <LinkedInConnect />
       </div>
     );
   }
@@ -814,7 +804,6 @@ export default function LinkedInAutomationPage() {
                   onStartCampaign={handleStartCampaign}
                   importStatus={user.importStatus}
                   setShowNewCampaignModal={setShowNewCampaignModal}
-                  {...(isDemo ? { setSelectedCampaign } : {})}
                 />
               )}
             </div>
@@ -827,7 +816,7 @@ export default function LinkedInAutomationPage() {
                 transitionDelay: hasLoaded ? '400ms' : '0ms'
               }}
             >
-              <RecentActivity activities={isDemo ? demoActivities : undefined} />
+              <RecentActivity />
             </div>
           </div>
         </div>
