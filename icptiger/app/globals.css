@@ -1,0 +1,368 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Add smooth scrolling behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+
+/* Prevent flash of unstyled content */
+:root {
+  --removed-body-scroll-bar-size: 0px;
+}
+
+/* Preload critical styles */
+@layer base {
+  /* Base styles that should be applied immediately */
+  body {
+    @apply bg-white text-black antialiased;
+  }
+  
+  /* Ensure font loading */
+  .font-outfit {
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  }
+  
+  .font-rufina {
+    font-family: 'Rufina', serif;
+  }
+}
+
+/* Better approach for full-width elements */
+.full-width-container {
+  width: 100%;
+  max-width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  box-sizing: border-box;
+  position: relative;
+}
+
+html.has-scroll {
+  --removed-body-scroll-bar-size: 17px;
+}
+
+/* This class will be used for elements that need to extend to the edge of the viewport */
+.full-bleed {
+  width: 100vw;
+  margin-left: calc(-50vw + 50% + var(--removed-body-scroll-bar-size) / 2);
+  box-sizing: border-box;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --black: 0 0% 11.8%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --sidebar-background: 0 0% 96%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 1.67% 87.68%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+  .dark {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 98%;
+    --black: 0 0% 11.8%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@keyframes wave {
+  0% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(20deg);
+  }
+  40% {
+    transform: rotate(-10deg);
+  }
+  60% {
+    transform: rotate(20deg);
+  }
+  80% {
+    transform: rotate(-5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-wave {
+  display: inline-block;
+  animation: wave 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: 75% 75%;
+}
+
+/* Blinking cursor animation */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Add pulsating animation keyframes */
+@keyframes pulsate {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.pulsate {
+  animation: pulsate 1.5s ease-in-out infinite;
+}
+
+/* Step progress filling circle animation - smooth continuous pulse */
+@keyframes smoothPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+.animate-fill-circle {
+  animation: smoothPulse 2.5s ease-in-out infinite;
+}
+
+/* Summary indicator smooth breathing animation */
+@keyframes smoothBreathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+}
+
+.animate-breathe {
+  animation: smoothBreathe 3s ease-in-out infinite;
+}
+
+/* Modal animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+}
+
+/* Safari accent color */
+:root {
+  color-scheme: light;
+  accent-color: #0A66C2;
+}
+
+/* Custom outer scrollbar styles for main page */
+html, body {
+  scrollbar-color: #0A66C2 #fff;
+  scrollbar-width: thin;
+}
+
+
+
+
+
+/* Show default cursor for text selection only */
+input[type="text"], input[type="email"], input[type="password"], textarea {
+  cursor: text !important;
+}
+
+/* Chrome, Safari, Edge - Outer scrollbar only */
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  width: 12px;
+  background: #0A66C2;
+}
+
+html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb {
+  background: #fff;
+  border-radius: 8px;
+  border: 2px solid #0A66C2;
+}
+
+html::-webkit-scrollbar-track, body::-webkit-scrollbar-track {
+  background: #0A66C2;
+  border-radius: 0;
+}
+
+/* Custom scrollbar styles for Safari */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A66C2;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ffffff;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f5f5f5;
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff #0A66C2;
+}
+
+.waitlist-email-input:focus-visible {
+  box-shadow: none !important;
+  outline: none !important;
+}
+.waitlist-email-input:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.input-focus-gray:focus {
+  border-color: #e5e7eb !important; /* Tailwind gray-200 */
+  box-shadow: none !important;
+}
+
+
+
+/* Glassmorphism card effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.28);
+  border: 1.5px solid rgba(255, 255, 255, 0.35); /* faint white border */
+  box-shadow: 0 12px 48px 0 rgba(31, 38, 135, 0.12), 0 0 0 1px rgba(255,255,255,0.18) inset;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  transition: box-shadow 0.3s, border 0.3s;
+}
+
+.glass-card:hover {
+  box-shadow: 0 16px 56px 0 rgba(31, 38, 135, 0.16), 0 0 0 1.5px rgba(255,255,255,0.22) inset;
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+}
