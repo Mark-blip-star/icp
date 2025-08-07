@@ -815,6 +815,7 @@ export class SimpleWebsocketGateway
         try {
           // Skip CDP screencast frames - we'll use forceScreenshotUpdate instead
           // This prevents the [object Object] issue
+          console.log(`[${userId}] CDP screencast frame received but skipped to prevent [object Object] issue`);
           return;
         } catch (error) {
           this.logger.error(`[${userId}] Error in CDP screencast frame:`, error);
@@ -960,10 +961,18 @@ export class SimpleWebsocketGateway
       console.log(`[${userId}] Screenshot taken, size: ${base64Image.length} chars`);
       console.log(`[${userId}] Data URL starts with: ${dataUrl.substring(0, 50)}...`);
       
-      client.emit('screencast', {
+      const screencastData = {
         data: dataUrl,
         timestamp: Date.now()
+      };
+      
+      console.log(`[${userId}] About to emit screencast with data:`, {
+        dataType: typeof screencastData.data,
+        dataLength: screencastData.data.length,
+        dataStartsWith: screencastData.data.substring(0, 50)
       });
+      
+      client.emit('screencast', screencastData);
       
       console.log(`[${userId}] ✅ Screenshot update sent to frontend`);
     } catch (error) {

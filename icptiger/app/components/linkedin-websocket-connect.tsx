@@ -148,8 +148,19 @@ export default function LinkedInWebSocketConnect({
       });
 
       newSocket.on('screencast', (data) => {
-        console.log('Frontend: Received screencast update, data length:', data.data ? data.data.length : 'no data');
-        setScreencastData(data.data);
+        console.log('Frontend: Received screencast event:', data);
+        console.log('Frontend: Data type:', typeof data);
+        console.log('Frontend: Data keys:', Object.keys(data));
+        console.log('Frontend: Data.data type:', typeof data.data);
+        console.log('Frontend: Data.data starts with:', data.data ? data.data.substring(0, 50) : 'no data');
+        console.log('Frontend: Data.data length:', data.data ? data.data.length : 'no data');
+        
+        if (data.data && typeof data.data === 'string' && data.data.startsWith('data:image/jpeg;base64,')) {
+          setScreencastData(data.data);
+          console.log('Frontend: ✅ Valid screenshot data set');
+        } else {
+          console.error('Frontend: ❌ Invalid screenshot data format:', data.data);
+        }
       });
 
       newSocket.on('inputUpdated', (data) => {
