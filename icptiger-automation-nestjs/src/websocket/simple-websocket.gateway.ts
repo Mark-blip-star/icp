@@ -296,6 +296,25 @@ export class SimpleWebsocketGateway
                       }, emailField);
                       
                       console.log(`[${userId}] Clicked, focused, and cleared email field`);
+                      
+                      // Send input field update to frontend
+                      const emailFieldInfo = await session.page.evaluate((element) => {
+                        return {
+                          tagName: element.tagName,
+                          type: (element as HTMLInputElement).type || '',
+                          id: element.id,
+                          className: element.className,
+                          value: (element as HTMLInputElement).value || '',
+                          placeholder: (element as HTMLInputElement).placeholder || '',
+                          cursorPosition: 0
+                        };
+                      }, emailField);
+                      
+                      client.emit('inputUpdated', {
+                        element: emailFieldInfo,
+                        timestamp: Date.now()
+                      });
+                      console.log(`[${userId}] Sent email field update to frontend:`, emailFieldInfo);
                     }
                   }
                 }
@@ -321,6 +340,25 @@ export class SimpleWebsocketGateway
                       }, passwordField);
                       
                       console.log(`[${userId}] Clicked, focused, and cleared password field`);
+                      
+                      // Send input field update to frontend
+                      const passwordFieldInfo = await session.page.evaluate((element) => {
+                        return {
+                          tagName: element.tagName,
+                          type: (element as HTMLInputElement).type || '',
+                          id: element.id,
+                          className: element.className,
+                          value: (element as HTMLInputElement).value || '',
+                          placeholder: (element as HTMLInputElement).placeholder || '',
+                          cursorPosition: 0
+                        };
+                      }, passwordField);
+                      
+                      client.emit('inputUpdated', {
+                        element: passwordFieldInfo,
+                        timestamp: Date.now()
+                      });
+                      console.log(`[${userId}] Sent password field update to frontend:`, passwordFieldInfo);
                     }
                   }
                 }
@@ -423,7 +461,7 @@ export class SimpleWebsocketGateway
           }
           
           // Ensure the focused element is visible and cursor is positioned
-          await session.page.evaluate(() => {
+          const updatedElementInfo = await session.page.evaluate(() => {
             const activeElement = document.activeElement;
             if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
               // Scroll element into view if needed
@@ -435,8 +473,29 @@ export class SimpleWebsocketGateway
               input.setSelectionRange(length, length);
               
               console.log('Active element scrolled into view and cursor positioned');
+              
+              // Return updated element info
+              return {
+                tagName: activeElement.tagName,
+                type: input.type || '',
+                id: activeElement.id,
+                className: activeElement.className,
+                value: input.value || '',
+                placeholder: input.placeholder || '',
+                cursorPosition: length
+              };
             }
+            return null;
           });
+          
+          // Send updated element state to frontend
+          if (updatedElementInfo) {
+            client.emit('inputUpdated', {
+              element: updatedElementInfo,
+              timestamp: Date.now()
+            });
+            console.log(`[${userId}] Sent input update to frontend:`, updatedElementInfo);
+          }
         } catch (keyboardError) {
           console.error(`[${userId}] Keyboard action failed:`, keyboardError);
           if (keyboardError.message.includes('Session closed') || keyboardError.message.includes('page has been closed')) {

@@ -34,6 +34,17 @@ export default function LinkedInWebSocketConnect({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const [inputOverlay, setInputOverlay] = useState<{
+    email: string;
+    password: string;
+    activeField: 'email' | 'password' | null;
+    cursorPosition: number;
+  }>({
+    email: '',
+    password: '',
+    activeField: null,
+    cursorPosition: 0
+  });
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -127,6 +138,27 @@ export default function LinkedInWebSocketConnect({
 
       newSocket.on('screencast', (data) => {
         setScreencastData(data);
+      });
+
+      newSocket.on('inputUpdated', (data) => {
+        addDebugInfo(`Input updated: ${data.element.type} field`);
+        
+        // Update input overlay based on element type
+        if (data.element.type === 'email' || data.element.placeholder?.toLowerCase().includes('email')) {
+          setInputOverlay(prev => ({
+            ...prev,
+            email: data.element.value,
+            activeField: 'email',
+            cursorPosition: data.element.cursorPosition
+          }));
+        } else if (data.element.type === 'password') {
+          setInputOverlay(prev => ({
+            ...prev,
+            password: data.element.value,
+            activeField: 'password',
+            cursorPosition: data.element.cursorPosition
+          }));
+        }
       });
 
       newSocket.on('error', (data) => {
@@ -369,6 +401,59 @@ export default function LinkedInWebSocketConnect({
                   autoFocus
                   tabIndex={-1}
                 />
+                
+                {/* Input overlay for real-time text display */}
+                {(inputOverlay.email || inputOverlay.password) && (
+                  <div className="absolute inset-0 pointer-events-none">
+                    {/* Email field overlay */}
+                    {inputOverlay.email && (
+                      <div 
+                        className="absolute bg-white text-black px-3 py-2 rounded border-2 border-blue-500 font-mono text-sm"
+                        style={{
+                          top: '35%',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          minWidth: '300px',
+                          maxWidth: '400px'
+                        }}
+                      >
+                        <div className="flex items-center">
+                          <span className="text-gray-500 mr-2">📧</span>
+                          <span className="flex-1">
+                            {inputOverlay.email}
+                            {inputOverlay.activeField === 'email' && (
+                              <span className="inline-block w-0.5 h-4 bg-black ml-1 animate-pulse"></span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Password field overlay */}
+                    {inputOverlay.password && (
+                      <div 
+                        className="absolute bg-white text-black px-3 py-2 rounded border-2 border-blue-500 font-mono text-sm"
+                        style={{
+                          top: '45%',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          minWidth: '300px',
+                          maxWidth: '400px'
+                        }}
+                      >
+                        <div className="flex items-center">
+                          <span className="text-gray-500 mr-2">🔒</span>
+                          <span className="flex-1">
+                            {'•'.repeat(inputOverlay.password.length)}
+                            {inputOverlay.activeField === 'password' && (
+                              <span className="inline-block w-0.5 h-4 bg-black ml-1 animate-pulse"></span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               
               {!screencastData && (
