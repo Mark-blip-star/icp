@@ -53,6 +53,12 @@ export class SessionService {
         timeout: 60000,
       });
 
+      // Wait for page to load and ensure all elements are visible
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await page.evaluate(() => {
+        window.scrollTo(0, 0);
+      });
+
       const sessionId = `${userId}_${Date.now()}`;
       const sessionInfo: BrowserSessionInfo = {
         browser,

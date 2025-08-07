@@ -724,8 +724,8 @@ export class SimpleWebsocketGateway
       await cdpSession.send('Page.startScreencast', {
         format: 'jpeg',
         quality: 80,
-        maxWidth: 1280,
-        maxHeight: 720
+        maxWidth: 1920,
+        maxHeight: 1200
       });
 
       session.screencastRunning = true;
