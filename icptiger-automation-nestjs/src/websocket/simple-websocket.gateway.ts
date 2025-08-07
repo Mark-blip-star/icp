@@ -468,8 +468,11 @@ export class SimpleWebsocketGateway
           }
           
           // Ensure the focused element is visible and cursor is positioned, then send update
+          console.log(`[${userId}] Getting updated element info after keyboard event...`);
           const updatedElementInfo = await session.page.evaluate(() => {
             const activeElement = document.activeElement;
+            console.log('Browser: Active element:', activeElement);
+            
             if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
               // Scroll element into view if needed
               activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -479,7 +482,10 @@ export class SimpleWebsocketGateway
               const length = input.value.length;
               input.setSelectionRange(length, length);
               
-              console.log('Active element scrolled into view and cursor positioned');
+              console.log('Browser: Active element scrolled into view and cursor positioned');
+              console.log('Browser: Input value:', input.value);
+              console.log('Browser: Input type:', input.type);
+              console.log('Browser: Input placeholder:', input.placeholder);
               
               // Return updated element info
               return {
@@ -492,16 +498,22 @@ export class SimpleWebsocketGateway
                 cursorPosition: length
               };
             }
+            console.log('Browser: No active input element found');
             return null;
           });
           
+          console.log(`[${userId}] Updated element info:`, updatedElementInfo);
+          
           // Send updated element state to frontend
           if (updatedElementInfo) {
-            client.emit('inputUpdated', {
+            const updateData = {
               element: updatedElementInfo,
               timestamp: Date.now()
-            });
-            console.log(`[${userId}] Sent input update to frontend:`, updatedElementInfo);
+            };
+            client.emit('inputUpdated', updateData);
+            console.log(`[${userId}] Sent input update to frontend:`, JSON.stringify(updateData, null, 2));
+          } else {
+            console.log(`[${userId}] No element info to send to frontend`);
           }
         } catch (keyboardError) {
           console.error(`[${userId}] Keyboard action failed:`, keyboardError);
@@ -748,11 +760,14 @@ export class SimpleWebsocketGateway
 
   private async sendInputUpdate(userId: string, client: Socket, page: any): Promise<void> {
     try {
+      console.log(`[${userId}] sendInputUpdate called`);
       const activeElementInfo = await page.evaluate(() => {
         const activeElement = document.activeElement;
+        console.log('sendInputUpdate: Active element:', activeElement);
+        
         if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
           const input = activeElement as HTMLInputElement;
-          return {
+          const info = {
             tagName: activeElement.tagName,
             type: input.type || '',
             id: activeElement.id,
@@ -761,23 +776,28 @@ export class SimpleWebsocketGateway
             placeholder: input.placeholder || '',
             cursorPosition: input.selectionStart || 0
           };
+          console.log('sendInputUpdate: Element info:', info);
+          return info;
         }
+        console.log('sendInputUpdate: No active input element');
         return null;
       });
 
       if (activeElementInfo) {
-        client.emit('inputUpdated', {
+        const updateData = {
           element: activeElementInfo,
           timestamp: Date.now()
-        });
-        console.log(`[${userId}] Sent input update:`, activeElementInfo);
+        };
+        client.emit('inputUpdated', updateData);
+        console.log(`[${userId}] Sent input update via sendInputUpdate:`, JSON.stringify(updateData, null, 2));
       } else {
         // If no active element, send empty update to clear overlay
-        client.emit('inputUpdated', {
+        const updateData = {
           element: null,
           timestamp: Date.now()
-        });
-        console.log(`[${userId}] Sent empty input update to clear overlay`);
+        };
+        client.emit('inputUpdated', updateData);
+        console.log(`[${userId}] Sent empty input update to clear overlay:`, JSON.stringify(updateData, null, 2));
       }
     } catch (error) {
       console.log(`[${userId}] Error sending input update:`, error.message);
