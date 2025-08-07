@@ -436,7 +436,7 @@ export default function LinkedInWebSocketConnect({
                   ref={canvasRef}
                   width={1280}
                   height={720}
-                  className="w-full h-auto cursor-crosshair"
+                  className="w-full max-h-[70vh] object-contain cursor-crosshair"
                   onClick={handleCanvasClick}
                   onWheel={handleScroll}
                   style={{ imageRendering: 'pixelated' }}
@@ -520,8 +520,8 @@ export default function LinkedInWebSocketConnect({
           {debugInfo.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Debug Info</h4>
-              <div className="bg-muted p-3 rounded-md text-xs font-mono max-h-32 overflow-y-auto">
-                {debugInfo.map((info, index) => (
+              <div className="bg-muted p-2 rounded-md text-xs font-mono max-h-24 overflow-y-auto">
+                {debugInfo.slice(-5).map((info, index) => (
                   <div key={index} className="text-muted-foreground">
                     {info}
                   </div>
