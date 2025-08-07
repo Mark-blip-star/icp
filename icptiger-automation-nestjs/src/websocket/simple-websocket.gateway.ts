@@ -1,23 +1,22 @@
 import {
   WebSocketGateway,
+  WebSocketServer,
   SubscribeMessage,
-  MessageBody,
-  ConnectedSocket,
   OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  WebSocketServer,
+  ConnectedSocket,
+  MessageBody,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
+import { Logger } from '@nestjs/common';
 import { LinkedInAutomationService } from '../linkedin/automation.service';
+import { SessionService } from '../browser/session.service';
 
 @WebSocketGateway({
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: '*',
   },
-  transports: ['websocket', 'polling'],
 })
 export class SimpleWebsocketGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
@@ -29,67 +28,23 @@ export class SimpleWebsocketGateway
   private userSockets = new Map<string, Socket>();
 
   constructor(
-    private linkedInAutomationService: LinkedInAutomationService
+    private linkedInAutomationService: LinkedInAutomationService,
+    private sessionService: SessionService,
   ) {}
 
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway initialized');
   }
 
-  async handleConnection(client: Socket, ...args: any[]) {
+  async handleConnection(client: Socket) {
     const query = client.handshake.query as any;
     const userId = query.user_id as string;
 
-    if (!userId) {
-      this.logger.warn('Connection attempt without user_id');
-      client.disconnect();
-      return;
-    }
-
-    this.logger.log(`[${userId}] New socket connection from ${client.handshake.address}`);
-    this.userSockets.set(userId, client);
-
-    client.join(`user_${userId}`);
-    client.emit('connected', {
-      message: 'Successfully connected to automation server',
-      userId,
-    });
-
-    const hasSession = await this.linkedInAutomationService.hasActiveSession(userId);
-    
-    if (hasSession) {
-      const session = await this.linkedInAutomationService.getSessionInfo(userId);
-      this.logger.log(`[${userId}] Found existing session, current URL: ${session?.page?.url()}`);
-      
-      client.emit('readyForLogin', {
-        message: 'LinkedIn session already active, ready for interaction',
-        url: session?.page?.url(),
-      });
-      
-      await this.startCDPScreencast(userId, client);
+    if (userId) {
+      this.userSockets.set(userId, client);
+      this.logger.log(`[${userId}] Client connected`);
     } else {
-      this.logger.log(`[${userId}] No existing session found, starting fresh login flow`);
-      try {
-        await this.linkedInAutomationService.runWithLogin(
-          { id: 'temp', status: 'active', user_id: userId } as any,
-          { user_id: userId } as any,
-          async ({ page }) => {
-            this.logger.log(`[${userId}] LinkedIn login page loaded and ready`);
-            
-            client.emit('readyForLogin', {
-              message: 'LinkedIn login page loaded, ready for user interaction',
-              url: page.url(),
-            });
-            
-            await this.startCDPScreencast(userId, client);
-          }
-        );
-      } catch (error) {
-        this.logger.error(`[${userId}] Error launching Puppeteer:`, error);
-        client.emit('error', 'Failed to launch LinkedIn login session');
-        client.disconnect(true);
-        return;
-      }
+      this.logger.warn('Client connected without user_id');
     }
   }
 
@@ -99,426 +54,261 @@ export class SimpleWebsocketGateway
 
     if (userId) {
       this.userSockets.delete(userId);
-      this.logger.log(`[${userId}] User disconnected`);
-      
-      await this.stopCDPScreencast(userId, client);
+      this.logger.log(`[${userId}] Client disconnected`);
     }
   }
 
-  @SubscribeMessage('startLogin')
-  async handleStartLogin(
-    @MessageBody() data: any,
+  @SubscribeMessage('dom-action')
+  async handleDOMAction(
     @ConnectedSocket() client: Socket,
+    @MessageBody() action: any,
   ) {
-    const query = client.handshake.query as any;
-    const userId = query.user_id as string;
-
+    const userId = this.getUserIdFromClient(client);
     if (!userId) {
-      client.emit('error', 'User ID not provided');
+      client.emit('error', { message: 'User ID not provided' });
       return;
     }
 
-    this.logger.log(`[${userId}] Start login requested`);
+    this.logger.log(`[${userId}] DOM action received:`, action);
 
     try {
-      const hasSession = await this.linkedInAutomationService.hasActiveSession(userId);
-      
-      if (hasSession) {
-        const session = await this.linkedInAutomationService.getSessionInfo(userId);
-        if (session && session.page) {
-          this.logger.log(`[${userId}] Reusing existing session, URL: ${session.page.url()}`);
-          
-          this.linkedInAutomationService.setLoginSuccessCallback(userId, () => {
-            client.emit('loginSuccess', { 
-              message: 'Successfully logged in to LinkedIn',
-              url: session.page.url()
-            });
-          });
-          
-          await this.startCDPScreencast(userId, client);
-          
-          client.emit('loginStarted', {
-            message: 'LinkedIn login session started',
-            url: session.page.url(),
-          });
-        }
-      } else {
-        await this.linkedInAutomationService.runWithLogin(
-          { id: 'temp', status: 'active', user_id: userId } as any,
-          { user_id: userId } as any,
-          async ({ page }) => {
-            this.logger.log(`[${userId}] LinkedIn login page loaded and ready`);
-            
-            this.linkedInAutomationService.setLoginSuccessCallback(userId, () => {
-              client.emit('loginSuccess', { 
-                message: 'Successfully logged in to LinkedIn',
-                url: page.url()
-              });
-            });
-            
-            await this.startCDPScreencast(userId, client);
-            
-            client.emit('loginStarted', {
-              message: 'LinkedIn login session started',
-              url: page.url(),
-            });
-          }
+      const session = await this.sessionService.getSession(userId);
+      if (!session || !session.page || session.page.isClosed()) {
+        client.emit('dom-action-error', { message: 'No active session found' });
+        return;
+      }
+
+      // Execute the action in Puppeteer
+      await this.executeDOMAction(session.page, action);
+
+      // Send success response
+      client.emit('dom-action-success', {
+        message: 'Action executed successfully',
+        action: action,
+      });
+
+      // Check if new captcha appeared after action
+      const pageHTML = await session.page.content();
+
+      // Check for actual captcha (not just the initial screen)
+      const hasActualCaptcha = await session.page.evaluate(() => {
+        // Look for actual captcha elements (not just start button)
+        const captchaElements = document.querySelectorAll(
+          '[id*="captcha"]:not([class*="hidden"]), [class*="captcha"]:not([class*="hidden"])',
         );
+        const puzzleElements = document.querySelectorAll(
+          '[id*="puzzle"], [class*="puzzle"]',
+        );
+        const interactiveCaptcha = document.querySelectorAll(
+          'canvas, iframe[src*="captcha"], div[class*="captcha"]:not([class*="hidden"])',
+        );
+
+        return (
+          captchaElements.length > 0 ||
+          puzzleElements.length > 0 ||
+          interactiveCaptcha.length > 0
+        );
+      });
+
+      if (hasActualCaptcha) {
+        this.logger.log(`[${userId}] Actual captcha detected after action`);
+        client.emit('captcha-detected', { html: pageHTML });
+      } else if (
+        pageHTML.includes('captcha') ||
+        pageHTML.includes('verification')
+      ) {
+        this.logger.log(`[${userId}] Captcha screen detected after action`);
+        client.emit('captcha-detected', { html: pageHTML });
       }
     } catch (error) {
-      this.logger.error(`[${userId}] Error starting login:`, error);
-      client.emit('error', 'Failed to start LinkedIn login session');
+      this.logger.error(`[${userId}] DOM action error:`, error);
+      client.emit('dom-action-error', {
+        message: 'Failed to execute action',
+        error: error.message,
+      });
     }
   }
 
-  @SubscribeMessage('launchLinkedInLogin')
-  async handleLaunchLinkedInLogin(
-    @MessageBody() data: any,
+  @SubscribeMessage('captcha-detected')
+  async handleCaptchaDetected(
     @ConnectedSocket() client: Socket,
+    @MessageBody() data: any,
   ) {
-    const query = client.handshake.query as any;
-    const userId = query.user_id as string;
-
+    const userId = this.getUserIdFromClient(client);
     if (!userId) {
-      client.emit('error', 'User ID not provided');
+      client.emit('error', { message: 'User ID not provided' });
       return;
     }
 
-    this.logger.log(`[${userId}] LinkedIn login requested - launching real browser session`);
+    this.logger.log(`[${userId}] Captcha detected, storing session...`);
 
     try {
-      // Create actual LinkedIn session using automation service
-      await this.linkedInAutomationService.runWithLogin(
-        { id: 'temp', status: 'active' } as any, // Mock campaign for session creation
-        { user_id: userId } as any, // Mock account data
-        async ({ page }) => {
-          this.logger.log(`[${userId}] LinkedIn login page loaded and ready`);
-          
-          // Emit ready event to frontend
-          client.emit('readyForLogin', {
-            message: 'LinkedIn login page loaded, ready for user interaction',
-            url: page.url(),
-          });
-
-          // Keep session alive for user interaction
-          // The session will be managed by SessionService
-        }
+      // Store the existing browser and page session
+      await this.sessionService.storeExistingSession(
+        userId,
+        data.browser,
+        data.page,
       );
+
+      this.logger.log(`[${userId}] Session stored successfully`);
+
+      // Forward the captcha HTML to the frontend
+      client.emit('captcha-detected', { html: data.html });
     } catch (error) {
-      this.logger.error(`[${userId}] Failed to launch LinkedIn session:`, error);
-      client.emit('error', `Failed to launch LinkedIn session: ${error.message}`);
+      this.logger.error(`[${userId}] Failed to store session:`, error);
+      client.emit('error', {
+        message: 'Failed to store session',
+        error: error.message,
+      });
     }
   }
 
-  @SubscribeMessage('mouse')
-  async handleMouseEvent(
-    @MessageBody() event: any,
+  @SubscribeMessage('get-page-html')
+  async handleGetPageHTML(
     @ConnectedSocket() client: Socket,
+    @MessageBody() data: any,
   ) {
-    const query = client.handshake.query as any;
-    const userId = query.user_id as string;
+    const userId = this.getUserIdFromClient(client);
+    if (!userId) {
+      client.emit('error', { message: 'User ID not provided' });
+      return;
+    }
 
-    if (!userId) return;
-
-    this.logger.log(`[${userId}] Mouse event: ${event.type} at (${event.x}, ${event.y})`);
-    console.log(`[${userId}] Mouse event received:`, event);
-    console.log(`[${userId}] Event details:`, {
-      type: event.type,
-      x: event.x,
-      y: event.y,
-      timestamp: new Date().toISOString()
-    });
+    this.logger.log(`[${userId}] Get page HTML requested`);
 
     try {
-      const session = await this.linkedInAutomationService.getSessionInfo(userId);
-      console.log(`[${userId}] Session found:`, !!session);
-      console.log(`[${userId}] Page exists:`, !!session?.page);
-      console.log(`[${userId}] Page URL:`, session?.page?.url());
-      console.log(`[${userId}] Page closed:`, session?.page?.isClosed());
-      
-      if (session && session.page && !session.page.isClosed()) {
-        console.log(`[${userId}] Executing mouse action: ${event.type} at (${event.x}, ${event.y})`);
-        
-        try {
-          await session.page.mouse.move(event.x, event.y);
-          console.log(`[${userId}] Mouse moved to (${event.x}, ${event.y})`);
-          
-          if (event.type === "click") {
-            await session.page.mouse.click(event.x, event.y);
-            console.log(`[${userId}] Mouse clicked at (${event.x}, ${event.y})`);
-            
-            try {
-              const elementAtPoint = await session.page.evaluate((x, y) => {
-                const element = document.elementFromPoint(x, y);
-                if (element) {
-                  return {
-                    tagName: element.tagName,
-                    id: element.id,
-                    className: element.className,
-                    type: element.getAttribute('type'),
-                    placeholder: element.getAttribute('placeholder'),
-                    text: element.textContent?.substring(0, 50)
-                  };
-                }
-                return null;
-              }, event.x, event.y);
-              console.log(`[${userId}] Element at click point:`, elementAtPoint);
-            } catch (evalError) {
-              console.log(`[${userId}] Error evaluating element at point:`, evalError.message);
-            }
-            
-            try {
-              await session.page.evaluate(() => {
-                const activeElement = document.activeElement as HTMLElement;
-                if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
-                  activeElement.focus();
-                  console.log('Focused on:', activeElement.tagName, activeElement.getAttribute('type'));
+      const session = await this.sessionService.getSession(userId);
+      if (!session || !session.page || session.page.isClosed()) {
+        client.emit('error', { message: 'No active session found' });
+        return;
+      }
+
+      const html = await session.page.content();
+      client.emit('page-html', { html });
+    } catch (error) {
+      this.logger.error(`[${userId}] Get page HTML error:`, error);
+      client.emit('error', { message: 'Failed to get page HTML' });
+    }
+  }
+
+  @SubscribeMessage('enable-manual-mode')
+  async handleEnableManualMode(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: any,
+  ) {
+    const userId = this.getUserIdFromClient(client);
+    if (!userId) {
+      client.emit('error', { message: 'User ID not provided' });
+      return;
+    }
+
+    this.logger.log(`[${userId}] Enable manual mode requested`);
+
+    try {
+      const session = await this.sessionService.getSession(userId);
+      if (!session || !session.page || session.page.isClosed()) {
+        client.emit('error', { message: 'No active session found' });
+        return;
+      }
+
+      // Set extended timeouts for manual mode
+      await session.page.setDefaultTimeout(300000); // 5 minutes
+      await session.page.setDefaultNavigationTimeout(300000); // 5 minutes
+
+      client.emit('manual-mode-enabled', {
+        message: 'Manual mode enabled with extended timeouts',
+      });
+    } catch (error) {
+      this.logger.error(`[${userId}] Enable manual mode error:`, error);
+      client.emit('error', {
+        message: 'Failed to enable manual mode',
+        error: error.message,
+      });
+    }
+  }
+
+  private getUserIdFromClient(client: Socket): string | null {
+    const query = client.handshake.query as any;
+    return (query.user_id as string) || null;
+  }
+
+  private async executeDOMAction(page: any, action: any): Promise<void> {
+    switch (action.type) {
+      case 'click':
+        if (action.selector) {
+          try {
+            await page.click(action.selector);
+          } catch (error) {
+            // Якщо селектор не знайдено, спробуємо знайти кнопку за текстом
+            if (action.selector === 'button') {
+              await page.evaluate(() => {
+                const buttons = document.querySelectorAll(
+                  'button, a, [role="button"]',
+                );
+                for (const button of buttons) {
+                  const text = button.textContent?.trim();
+                  if (
+                    text &&
+                    (text.includes('пазл') ||
+                      text.includes('puzzle') ||
+                      text.includes('розпочати'))
+                  ) {
+                    (button as HTMLElement).click();
+                    return;
+                  }
                 }
               });
-            } catch (focusError) {
-              console.log(`[${userId}] Focus error:`, focusError.message);
-            }
-            
-            try {
-              const elementAtPoint = await session.page.evaluate((x, y) => {
-                const element = document.elementFromPoint(x, y);
-                return element ? element.tagName : null;
-              }, event.x, event.y);
-              
-              if (elementAtPoint !== 'INPUT' && elementAtPoint !== 'BUTTON') {
-                console.log(`[${userId}] Click didn't hit target element, trying selectors...`);
-                
-                const passwordField = await session.page.$('input[type="password"]');
-                if (passwordField) {
-                  const box = await passwordField.boundingBox();
-                  if (box) {
-                    const centerX = box.x + box.width / 2;
-                    const centerY = box.y + box.height / 2;
-                    console.log(`[${userId}] Found password field at (${centerX}, ${centerY})`);
-                    
-                    if (Math.abs(event.x - centerX) < 100 && Math.abs(event.y - centerY) < 50) {
-                      await session.page.mouse.click(centerX, centerY);
-                      console.log(`[${userId}] Clicked on password field center`);
-                    }
-                  }
-                }
-                
-                const signInButton = await session.page.$('button[type="submit"]');
-                if (signInButton) {
-                  const box = await signInButton.boundingBox();
-                  if (box) {
-                    const centerX = box.x + box.width / 2;
-                    const centerY = box.y + box.height / 2;
-                    console.log(`[${userId}] Found sign in button at (${centerX}, ${centerY})`);
-                    
-                    if (Math.abs(event.x - centerX) < 100 && Math.abs(event.y - centerY) < 50) {
-                      await session.page.mouse.click(centerX, centerY);
-                      console.log(`[${userId}] Clicked on sign in button center`);
-                    }
-                  }
-                }
-              }
-            } catch (selectorError) {
-              console.log(`[${userId}] Selector fallback error:`, selectorError.message);
-            }
-          }
-        } catch (mouseError) {
-          console.error(`[${userId}] Mouse action failed:`, mouseError);
-          if (mouseError.message.includes('Session closed') || mouseError.message.includes('page has been closed')) {
-            console.log(`[${userId}] Page was closed, attempting to recreate session...`);
-            await this.recreateSession(userId, client);
-          }
-        }
-      } else {
-        console.log(`[${userId}] No session, page, or page is closed for mouse event`);
-        if (session?.page?.isClosed()) {
-          console.log(`[${userId}] Page is closed, attempting to recreate session...`);
-          await this.recreateSession(userId, client);
-        }
-      }
-    } catch (error) {
-      this.logger.error(`[${userId}] Mouse event error:`, error);
-      console.error(`[${userId}] Mouse event error details:`, error);
-    }
-  }
-
-  @SubscribeMessage('keyboard')
-  async handleKeyboardEvent(
-    @MessageBody() event: any,
-    @ConnectedSocket() client: Socket,
-  ) {
-    const query = client.handshake.query as any;
-    const userId = query.user_id as string;
-
-    if (!userId) return;
-
-    this.logger.log(`[${userId}] Keyboard event: ${event.type} - ${event.key}`);
-    console.log(`[${userId}] Keyboard event received:`, event);
-    console.log(`[${userId}] Keyboard details:`, {
-      type: event.type,
-      key: event.key,
-      timestamp: new Date().toISOString()
-    });
-
-    try {
-      const session = await this.linkedInAutomationService.getSessionInfo(userId);
-      console.log(`[${userId}] Keyboard - Session found:`, !!session);
-      console.log(`[${userId}] Keyboard - Page exists:`, !!session?.page);
-      console.log(`[${userId}] Keyboard - Page closed:`, session?.page?.isClosed());
-      
-      if (session && session.page && !session.page.isClosed()) {
-        try {
-          // Фронтенд отправляет type: "press", key: "a"
-          if (event.type === "press") {
-            // Для обычных символов используем type, для специальных клавиш - press
-            if (event.key.length === 1) {
-              await session.page.keyboard.type(event.key);
-              console.log(`[${userId}] Key typed: ${event.key}`);
             } else {
-              await session.page.keyboard.press(event.key);
-              console.log(`[${userId}] Key pressed: ${event.key}`);
+              throw error;
             }
           }
-        } catch (keyboardError) {
-          console.error(`[${userId}] Keyboard action failed:`, keyboardError);
-          if (keyboardError.message.includes('Session closed') || keyboardError.message.includes('page has been closed')) {
-            console.log(`[${userId}] Page was closed during keyboard event, attempting to recreate session...`);
-            await this.recreateSession(userId, client);
-          }
+        } else if (action.x !== undefined && action.y !== undefined) {
+          await page.mouse.click(action.x, action.y);
         }
-      } else {
-        console.log(`[${userId}] No session, page, or page is closed for keyboard event`);
-        if (session?.page?.isClosed()) {
-          console.log(`[${userId}] Page is closed during keyboard event, attempting to recreate session...`);
-          await this.recreateSession(userId, client);
+        break;
+
+      case 'input':
+        if (action.selector && action.value !== undefined) {
+          await page.type(action.selector, action.value);
         }
-      }
-    } catch (error) {
-      this.logger.error(`[${userId}] Keyboard event error:`, error);
-      console.error(`[${userId}] Keyboard event error details:`, error);
-    }
-  }
+        break;
 
-  @SubscribeMessage('scroll')
-  async handleScrollEvent(
-    @MessageBody() event: any,
-    @ConnectedSocket() client: Socket,
-  ) {
-    const query = client.handshake.query as any;
-    const userId = query.user_id as string;
-
-    if (!userId) return;
-
-    this.logger.log(`[${userId}] Scroll event: ${event.type} - ${event.deltaY}`);
-    console.log(`[${userId}] Scroll event received:`, event);
-
-    try {
-      const session = await this.linkedInAutomationService.getSessionInfo(userId);
-      
-      if (session && session.page && !session.page.isClosed()) {
-        try {
-          if (event.type === "wheel") {
-            await session.page.evaluate((deltaY) => {
-              window.scrollBy(0, deltaY);
-            }, event.deltaY);
-            console.log(`[${userId}] Scrolled by: ${event.deltaY}`);
-          }
-        } catch (scrollError) {
-          console.error(`[${userId}] Scroll action failed:`, scrollError);
+      case 'submit':
+        if (action.selector) {
+          await page.evaluate((selector: string) => {
+            const form = document.querySelector(selector) as HTMLFormElement;
+            if (form) form.submit();
+          }, action.selector);
         }
-      } else {
-        console.log(`[${userId}] No session, page, or page is closed for scroll event`);
-      }
-    } catch (error) {
-      this.logger.error(`[${userId}] Scroll event error:`, error);
-    }
-  }
+        break;
 
-  @SubscribeMessage('getScreenshot')
-  async handleGetScreenshot(
-    @MessageBody() data: any,
-    @ConnectedSocket() client: Socket,
-  ) {
-    const query = client.handshake.query as any;
-    const userId = query.user_id as string;
+      case 'refresh':
+        await page.reload();
+        break;
 
-    if (!userId) return;
-
-    this.logger.log(`[${userId}] Screenshot requested`);
-    
-    try {
-      const session = await this.linkedInAutomationService.getSessionInfo(userId);
-      if (session && session.page) {
-        const screenshot = await session.page.screenshot({
-          type: 'png',
-        });
-        
-        client.emit('screencast', screenshot.toString());
-      } else {
-        client.emit('screencast', 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
-      }
-    } catch (error) {
-      this.logger.error(`[${userId}] Screenshot error:`, error);
-      client.emit('screencast', 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
-    }
-  }
-
-  @SubscribeMessage('closeSession')
-  async handleCloseSession(
-    @MessageBody() data: any,
-    @ConnectedSocket() client: Socket,
-  ) {
-    const query = client.handshake.query as any;
-    const userId = query.user_id as string;
-
-    if (!userId) return;
-
-    this.logger.log(`[${userId}] Session close requested`);
-    
-    try {
-      await this.linkedInAutomationService.closeSession(userId);
-      client.emit('sessionClosed', { message: 'Session closed successfully' });
-    } catch (error) {
-      this.logger.error(`[${userId}] Session close error:`, error);
-      client.emit('sessionClosed', { message: 'Session closed with errors' });
-    }
-  }
-
-  @SubscribeMessage('getSessionStatus')
-  async handleGetSessionStatus(
-    @MessageBody() data: any,
-    @ConnectedSocket() client: Socket,
-  ) {
-    const query = client.handshake.query as any;
-    const userId = query.user_id as string;
-
-    if (!userId) return;
-
-    try {
-      const hasSession = await this.linkedInAutomationService.hasActiveSession(userId);
-      const session = hasSession ? await this.linkedInAutomationService.getSessionInfo(userId) : null;
-      
-      client.emit('sessionStatus', {
-        hasSession,
-        isLoggedIn: session?.isLoggedIn || false,
-        url: session?.page?.url() || null,
-      });
-    } catch (error) {
-      this.logger.error(`[${userId}] Session status error:`, error);
-      client.emit('sessionStatus', {
-        hasSession: false,
-        isLoggedIn: false,
-        url: null,
-      });
+      default:
+        throw new Error(`Unknown action type: ${action.type}`);
     }
   }
 
   async sendToUser(userId: string, event: string, data: any): Promise<void> {
-    this.server.to(`user_${userId}`).emit(event, data);
+    const client = this.userSockets.get(userId);
+    if (client && client.connected) {
+      client.emit(event, data);
+      this.logger.log(`[${userId}] Sent event: ${event}`);
+    } else {
+      this.logger.warn(
+        `[${userId}] Client not found or not connected for event: ${event}`,
+      );
+    }
   }
 
   async broadcast(event: string, data: any): Promise<void> {
-    this.server.emit(event, data);
+    for (const client of this.userSockets.values()) {
+      if (client.connected) {
+        client.emit(event, data);
+      }
+    }
   }
 
   getConnectedUsersCount(): number {
@@ -528,93 +318,4 @@ export class SimpleWebsocketGateway
   getConnectedUsers(): string[] {
     return Array.from(this.userSockets.keys());
   }
-
-  private async startCDPScreencast(userId: string, client: Socket): Promise<void> {
-    try {
-      const session = await this.linkedInAutomationService.getSessionInfo(userId);
-      if (!session || !session.clientSession) {
-        this.logger.error(`[${userId}] No session or CDP session found for screencast`);
-        return;
-      }
-
-      const isScreencastRunning = (session as any).screencastRunning;
-      if (isScreencastRunning) {
-        console.log(`[${userId}] Screencast already running, skipping...`);
-        return;
-      }
-
-      if (!session.clientSession._screencastHandlerSet) {
-        session.clientSession.on('Page.screencastFrame', async ({ data, sessionId }) => {
-          try {
-            client.emit('screencast', data);
-            await session.clientSession.send('Page.screencastFrameAck', { sessionId });
-          } catch (error) {
-            this.logger.error(`[${userId}] Error handling screencast frame:`, error);
-          }
-        });
-        session.clientSession._screencastHandlerSet = true;
-        console.log(`[${userId}] Screencast frame handler set up`);
-      }
-
-      await session.clientSession.send('Page.startScreencast', {
-        format: 'jpeg',
-        quality: 80,
-        everyNthFrame: 1,
-      });
-
-      (session as any).screencastRunning = true;
-
-      this.logger.log(`[${userId}] CDP screencast started`);
-    } catch (error) {
-      this.logger.error(`[${userId}] Error starting CDP screencast:`, error);
-    }
-  }
-
-  private async stopCDPScreencast(userId: string, client: Socket): Promise<void> {
-    try {
-      const session = await this.linkedInAutomationService.getSessionInfo(userId);
-      if (session && session.clientSession) {
-        await session.clientSession.send('Page.stopScreencast');
-        (session as any).screencastRunning = false;
-        this.logger.log(`[${userId}] CDP screencast stopped`);
-      }
-    } catch (error) {
-      this.logger.error(`[${userId}] Error stopping CDP screencast:`, error);
-    }
-  }
-
-  private async recreateSession(userId: string, client: Socket): Promise<void> {
-    try {
-      console.log(`[${userId}] Recreating session...`);
-      
-      await this.linkedInAutomationService.closeSession(userId);
-      
-      await this.linkedInAutomationService.runWithLogin(
-        { id: 'temp', status: 'active', user_id: userId } as any,
-        { user_id: userId } as any,
-        async ({ page }) => {
-          console.log(`[${userId}] New session created, URL: ${page.url()}`);
-          
-          this.linkedInAutomationService.setLoginSuccessCallback(userId, () => {
-            client.emit('loginSuccess', { 
-              message: 'Successfully logged in to LinkedIn',
-              url: page.url()
-            });
-          });
-          
-          await this.startCDPScreencast(userId, client);
-          
-          client.emit('loginStarted', {
-            message: 'LinkedIn session recreated and ready',
-            url: page.url(),
-          });
-        }
-      );
-      
-      console.log(`[${userId}] Session recreated successfully`);
-    } catch (error) {
-      console.error(`[${userId}] Error recreating session:`, error);
-      client.emit('error', 'Failed to recreate session');
-    }
-  }
-} 
+}

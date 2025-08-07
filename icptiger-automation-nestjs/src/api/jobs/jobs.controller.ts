@@ -1,11 +1,23 @@
-import { Controller, Post, Get, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { QueueService } from '../../jobs/queue.service';
 import { WorkerService } from '../../jobs/worker.service';
 
 export class CreateJobDto {
   userId: string;
   campaignId: string;
-  jobType: 'followRequest' | 'followResponse' | 'sendMessages' | 'processPendingJobs';
+  jobType:
+    | 'followRequest'
+    | 'followResponse'
+    | 'sendMessages'
+    | 'processPendingJobs';
   data?: Record<string, any>;
 }
 
@@ -13,7 +25,7 @@ export class CreateJobDto {
 export class JobsController {
   constructor(
     private queueService: QueueService,
-    private workerService: WorkerService
+    private workerService: WorkerService,
   ) {}
 
   @Post()
@@ -25,7 +37,7 @@ export class JobsController {
         jobType,
         userId,
         campaignId,
-        data
+        data,
       );
 
       return {
@@ -45,20 +57,22 @@ export class JobsController {
           message: 'Failed to create job',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   @Post('follow-request')
-  async createFollowRequestJob(@Body() body: { userId: string; campaignId: string; importLimit?: number }) {
+  async createFollowRequestJob(
+    @Body() body: { userId: string; campaignId: string; importLimit?: number },
+  ) {
     try {
       const { userId, campaignId, importLimit = 10 } = body;
 
       const job = await this.queueService.addFollowRequestJob(
         userId,
         campaignId,
-        { importLimit }
+        { importLimit },
       );
 
       return {
@@ -78,7 +92,7 @@ export class JobsController {
           message: 'Failed to create follow request job',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -87,14 +101,14 @@ export class JobsController {
   async getJob(@Param('jobId') jobId: string) {
     try {
       const job = await this.queueService.getJob(jobId);
-      
+
       if (!job) {
         throw new HttpException(
           {
             success: false,
             message: 'Job not found',
           },
-          HttpStatus.NOT_FOUND
+          HttpStatus.NOT_FOUND,
         );
       }
 
@@ -117,14 +131,14 @@ export class JobsController {
       if (error instanceof HttpException) {
         throw error;
       }
-      
+
       throw new HttpException(
         {
           success: false,
           message: 'Failed to get job',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -145,7 +159,7 @@ export class JobsController {
           message: 'Failed to get queue stats',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -166,7 +180,7 @@ export class JobsController {
           message: 'Failed to get worker stats',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -178,7 +192,7 @@ export class JobsController {
 
       return {
         success: true,
-        data: jobs.map(job => ({
+        data: jobs.map((job) => ({
           id: job.id,
           name: job.name,
           data: job.data,
@@ -192,7 +206,7 @@ export class JobsController {
           message: 'Failed to get waiting jobs',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -204,7 +218,7 @@ export class JobsController {
 
       return {
         success: true,
-        data: jobs.map(job => ({
+        data: jobs.map((job) => ({
           id: job.id,
           name: job.name,
           data: job.data,
@@ -219,7 +233,7 @@ export class JobsController {
           message: 'Failed to get active jobs',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -231,7 +245,7 @@ export class JobsController {
 
       return {
         success: true,
-        data: jobs.map(job => ({
+        data: jobs.map((job) => ({
           id: job.id,
           name: job.name,
           data: job.data,
@@ -246,7 +260,7 @@ export class JobsController {
           message: 'Failed to get completed jobs',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -258,7 +272,7 @@ export class JobsController {
 
       return {
         success: true,
-        data: jobs.map(job => ({
+        data: jobs.map((job) => ({
           id: job.id,
           name: job.name,
           data: job.data,
@@ -274,8 +288,8 @@ export class JobsController {
           message: 'Failed to get failed jobs',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
-} 
+}

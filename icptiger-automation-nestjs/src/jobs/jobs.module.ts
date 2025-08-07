@@ -16,4 +16,4 @@ import { FollowResponseProcessor } from './processors/follow-response.processor'
   ],
   exports: [QueueService, WorkerService],
 })
-export class JobsModule {} 
+export class JobsModule {}

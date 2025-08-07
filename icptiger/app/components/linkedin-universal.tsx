@@ -1,67 +1,181 @@
 import React, { useState, useEffect, useRef } from "react";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { CheckCircle, Monitor, X, ExternalLink, Eye, EyeOff } from "lucide-react";
+import { CaptchaHandler } from "./captcha-handler";
 
 export function LinkedInUniversal() {
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loginStatus, setLoginStatus] = useState<'idle' | 'logging-in' | 'success' | 'failed'>('idle');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [loginStatus, setLoginStatus] = useState<
+    "idle" | "logging-in" | "success" | "failed" | "captcha_required"
+  >("idle");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [cookies, setCookies] = useState<{ li_at?: string; li_a?: string } | null>(null);
-  
+
+  // Captcha handling state
+  const [captchaVisible, setCaptchaVisible] = useState(false);
+  const [captchaHTML, setCaptchaHTML] = useState("");
+  const [socket, setSocket] = useState<any>(null);
+
   // Version number to force cache refresh
   const VERSION = "3.0.0";
 
+  // WebSocket connection for captcha handling
+  useEffect(() => {
+    if (loginStatus === "logging-in") {
+      const userId = email || "temp"; // Use email as user_id for session consistency
+      const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || "http://localhost:3008";
+
+      let newSocket: any = null;
+      let connectionTimeout: NodeJS.Timeout;
+
+      const connectWebSocket = async () => {
+        try {
+          // Import socket.io-client dynamically
+          const { io } = await import("socket.io-client");
+
+          newSocket = io(wsUrl, {
+            query: { user_id: userId },
+            transports: ["websocket", "polling"],
+          });
+
+          // Set connection timeout
+          connectionTimeout = setTimeout(() => {
+            console.log("⏰ WebSocket connection timeout");
+            if (newSocket) {
+              newSocket.disconnect();
+            }
+          }, 5000); // 5 second timeout
+
+          newSocket.on("connect", () => {
+            console.log("🔌 WebSocket connected for captcha handling");
+            clearTimeout(connectionTimeout);
+          });
+
+          newSocket.on("captcha-detected", (data: any) => {
+            console.log("🎯 Captcha detected, showing handler");
+            console.log("📄 HTML length:", data.html ? data.html.length : 0);
+            setCaptchaHTML(data.html);
+            setCaptchaVisible(true);
+          });
+
+          newSocket.on("login-success", (data: any) => {
+            console.log("✅ Login successful via WebSocket");
+            setCaptchaVisible(false);
+            setLoginStatus("success");
+            handleLoginSuccess(data.cookies);
+          });
+
+          newSocket.on("dom-action-success", (data: any) => {
+            console.log("✅ DOM action executed successfully:", data);
+          });
+
+          newSocket.on("dom-action-error", (data: any) => {
+            console.error("❌ DOM action failed:", data);
+          });
+
+          newSocket.on("connect_error", (error: any) => {
+            console.error("❌ WebSocket connection error:", error);
+            clearTimeout(connectionTimeout);
+          });
+
+          newSocket.on("disconnect", () => {
+            console.log("🔌 WebSocket connection closed");
+            clearTimeout(connectionTimeout);
+          });
+
+          // Log all events for debugging
+          newSocket.onAny((eventName: string, ...args: any[]) => {
+            console.log(`📡 WebSocket event: ${eventName}`, args);
+          });
+
+          setSocket(newSocket);
+        } catch (error) {
+          console.error("Failed to create WebSocket connection:", error);
+          clearTimeout(connectionTimeout);
+        }
+      };
+
+      connectWebSocket();
+
+      return () => {
+        clearTimeout(connectionTimeout);
+        // Don't disconnect socket - keep it for captcha synchronization
+        // Socket will be managed by the WebSocket handlers
+      };
+    }
+  }, [loginStatus]);
+
+  const handleCaptchaAction = (action: any) => {
+    if (socket && socket.connected) {
+      console.log("🎯 Sending DOM action to backend:", action);
+      socket.emit("dom-action", action);
+    } else {
+      console.error("❌ Socket not connected, cannot send action");
+    }
+  };
+
+  const handleCaptchaClose = () => {
+    setCaptchaVisible(false);
+    setCaptchaHTML("");
+  };
+
   const handleLoginSuccess = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log('🎉 Login success! Processing cookies...');
-      console.log('📋 li_at cookie:', cookies.li_at ? cookies.li_at.substring(0, 20) + '...' : 'Not found');
-      console.log('📋 li_a cookie:', cookies.li_a ? cookies.li_a.substring(0, 20) + '...' : 'Not found');
-      
+      console.log("🎉 Login success! Processing cookies...");
+      console.log(
+        "📋 li_at cookie:",
+        cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
+      );
+      console.log(
+        "📋 li_a cookie:",
+        cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
+      );
+
       if (cookies.li_at) {
         // Save cookies to backend
         await saveLinkedInCookies(cookies);
-        
+
         // Update status and show cookies
         setIsConnected(true);
         setCookies(cookies);
         localStorage.setItem("linkedInCredentials", "true");
         window.dispatchEvent(new Event("linkedInCredentialsChanged"));
-        
-        console.log('✅ LinkedIn connection completed successfully!');
-        
+
+        console.log("✅ LinkedIn connection completed successfully!");
+
         // Force refresh the page to update hasCredentials status
         setTimeout(() => {
-          console.log('🔄 Refreshing page to update connection status...');
+          console.log("🔄 Refreshing page to update connection status...");
           window.location.reload();
         }, 3000);
       } else {
-        console.log('❌ No li_at cookie found');
-        setError('No authentication cookies found. Please try logging in again.');
-        setLoginStatus('failed');
+        console.log("❌ No li_at cookie found");
+        setError("No authentication cookies found. Please try logging in again.");
+        setLoginStatus("failed");
       }
     } catch (error) {
-      console.error('❌ Error processing login success:', error);
-      setError('Failed to process login credentials. Please try again.');
-      setLoginStatus('idle');
+      console.error("❌ Error processing login success:", error);
+      setError("Failed to process login credentials. Please try again.");
+      setLoginStatus("idle");
     }
   };
 
   const saveLinkedInCookies = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log('💾 Saving cookies to backend...');
-      console.log('📤 Sending data to /api/linkedin/connect:', {
+      console.log("💾 Saving cookies to backend...");
+      console.log("📤 Sending data to /api/linkedin/connect:", {
         email: email,
-        li_at: cookies.li_at ? cookies.li_at.substring(0, 20) + '...' : 'Not found',
-        li_a: cookies.li_a ? cookies.li_a.substring(0, 20) + '...' : 'Not found'
+        li_at: cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
+        li_a: cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
       });
-      
-      const response = await fetch('/api/linkedin/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+
+      const response = await fetch("/api/linkedin/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email,
           li_at: cookies.li_at,
@@ -69,45 +183,45 @@ export function LinkedInUniversal() {
         }),
       });
 
-      console.log('📡 Connect API response status:', response.status);
+      console.log("📡 Connect API response status:", response.status);
       const result = await response.json();
-      console.log('📡 Connect API response:', result);
+      console.log("📡 Connect API response:", result);
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to save LinkedIn credentials');
+        throw new Error(result.error || "Failed to save LinkedIn credentials");
       }
 
-      console.log('✅ Cookies saved successfully to backend!');
+      console.log("✅ Cookies saved successfully to backend!");
       return result;
     } catch (error) {
-      console.error('❌ Error saving cookies:', error);
+      console.error("❌ Error saving cookies:", error);
       throw error;
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
-      setError('Please enter both email and password.');
+      setError("Please enter both email and password.");
       return;
     }
 
-    setLoginStatus('logging-in');
+    setLoginStatus("logging-in");
     setError(null);
-    
+
     try {
-      console.log('🔐 Starting backend login process...');
-      console.log('📧 Email:', email);
-      console.log('🔑 Password length:', password.length);
-      
+      console.log("🔐 Starting backend login process...");
+      console.log("📧 Email:", email);
+      console.log("🔑 Password length:", password.length);
+
       // Create AbortController for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-      
-      const response = await fetch('/api/linkedin/automated-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+
+      const response = await fetch("/api/linkedin/automated-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email,
           password: password,
@@ -116,47 +230,53 @@ export function LinkedInUniversal() {
       });
 
       clearTimeout(timeoutId);
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response ok:', response.ok);
+      console.log("📡 Response status:", response.status);
+      console.log("📡 Response ok:", response.ok);
 
       const result = await response.json();
-      console.log('✅ Backend login response:', result);
+      console.log("✅ Backend login response:", result);
 
       if (!response.ok) {
-        throw new Error(result.error || result.message || 'Login failed');
+        throw new Error(result.error || result.message || "Login failed");
       }
 
-      if (result.status === 'success' && result.cookies) {
-        console.log('🎉 Backend login successful!');
-        console.log('🍪 Received cookies from backend:', result.cookies);
-        setLoginStatus('success');
+      if (result.status === "success" && result.cookies) {
+        console.log("🎉 Backend login successful!");
+        console.log("🍪 Received cookies from backend:", result.cookies);
+        setLoginStatus("success");
         handleLoginSuccess(result.cookies);
-      } else if (result.status === 'verification_required') {
-        console.log('📱 Verification required');
-        setError('Phone verification required. Please check your phone and complete the verification, then try again.');
-        setLoginStatus('failed');
-      } else if (result.status === 'failed') {
-        console.log('❌ Backend login failed');
-        setError(result.message || 'Login failed. Please check your credentials and try again.');
-        setLoginStatus('failed');
+      } else if (result.status === "captcha_required") {
+        console.log("🎯 Captcha required - showing handler");
+        setLoginStatus("captcha_required");
+        setCaptchaHTML(result.captchaHtml);
+        setCaptchaVisible(true);
+      } else if (result.status === "verification_required") {
+        console.log("📱 Verification required");
+        setError(
+          "Phone verification required. Please check your phone and complete the verification, then try again.",
+        );
+        setLoginStatus("failed");
+      } else if (result.status === "failed") {
+        console.log("❌ Backend login failed");
+        setError(result.message || "Login failed. Please check your credentials and try again.");
+        setLoginStatus("failed");
       } else {
-        throw new Error('Unexpected response from backend');
+        throw new Error("Unexpected response from backend");
       }
-
     } catch (error) {
-      console.error('❌ Error during login:', error);
-      
+      console.error("❌ Error during login:", error);
+
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          setError('Login timeout. The process took too long. Please try again.');
+        if (error.name === "AbortError") {
+          setError("Login timeout. The process took too long. Please try again.");
         } else {
-          setError(error.message || 'Login failed. Please try again.');
+          setError(error.message || "Login failed. Please try again.");
         }
       } else {
-        setError('Login failed. Please try again.');
+        setError("Login failed. Please try again.");
       }
-      
-      setLoginStatus('failed');
+
+      setLoginStatus("failed");
     }
   };
 
@@ -174,7 +294,7 @@ export function LinkedInUniversal() {
           </div>
           <button
             onClick={() => {
-              console.log('🔄 Manual redirect triggered...');
+              console.log("🔄 Manual redirect triggered...");
               window.location.reload();
             }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -188,15 +308,26 @@ export function LinkedInUniversal() {
 
   return (
     <div className="w-full max-w-4xl mx-auto h-screen flex flex-col justify-center">
+      {/* Captcha Handler */}
+      <CaptchaHandler
+        isVisible={captchaVisible}
+        htmlContent={captchaHTML}
+        onClose={handleCaptchaClose}
+        onAction={handleCaptchaAction}
+      />
+
       {/* Header */}
       <div className="text-center mb-6">
         <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
           <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
           </svg>
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Connect Your <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">LinkedIn</span>
+          Connect Your{" "}
+          <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+            LinkedIn
+          </span>
         </h1>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
           Enter your LinkedIn credentials and we'll automatically connect your account.
@@ -239,7 +370,7 @@ export function LinkedInUniversal() {
               required
             />
           </div>
-          
+
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Password
@@ -267,19 +398,32 @@ export function LinkedInUniversal() {
               </button>
             </div>
           </div>
-          
+
           <button
             type="submit"
-            disabled={loginStatus === 'logging-in'}
+            disabled={loginStatus === "logging-in" || loginStatus === "captcha_required"}
             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2.5 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
           >
-            {loginStatus === 'logging-in' ? (
+            {loginStatus === "logging-in" ? (
               <div className="flex items-center justify-center">
                 <LoadingSpinner size="sm" color="white" />
                 <span className="ml-2">Logging in...</span>
               </div>
+            ) : loginStatus === "captcha_required" ? (
+              <div className="flex items-center justify-center">
+                <div className="w-4 h-4 bg-yellow-100 rounded-full flex items-center justify-center mr-2">
+                  <svg className="w-3 h-3 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <span className="ml-2">Captcha Required</span>
+              </div>
             ) : (
-              'Login to LinkedIn'
+              "Login to LinkedIn"
             )}
           </button>
         </form>
@@ -295,7 +439,7 @@ export function LinkedInUniversal() {
           </div>
         )}
 
-        {loginStatus === 'success' && (
+        {loginStatus === "success" && (
           <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
             <div className="flex items-center">
               <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center mr-2">
@@ -308,4 +452,4 @@ export function LinkedInUniversal() {
       </div>
     </div>
   );
-} 
+}
