@@ -78,7 +78,10 @@ export default function LinkedInWebSocketConnect({
   }, [socket]);
 
   const connectToWebSocket = async () => {
+    console.log('🔌 connectToWebSocket called!', { userId, existingSocket: !!socket });
+    
     if (socket) {
+      console.log('🔌 Disconnecting existing socket...');
       socket.disconnect();
     }
 
@@ -94,6 +97,7 @@ export default function LinkedInWebSocketConnect({
       });
 
       newSocket.on('connect', () => {
+        console.log('✅ WebSocket connected successfully!');
         setIsConnected(true);
         setIsConnecting(false);
         addDebugInfo('Connected to WebSocket server');
@@ -375,7 +379,12 @@ export default function LinkedInWebSocketConnect({
   };
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!socket || !canvasRef.current) return;
+    console.log('🎯 handleCanvasClick called!', { socket: !!socket, canvasRef: !!canvasRef.current });
+    
+    if (!socket || !canvasRef.current) {
+      console.log('❌ Early return - socket or canvas not available');
+      return;
+    }
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -449,8 +458,10 @@ export default function LinkedInWebSocketConnect({
     } else if (pageX >= signInButtonArea.x && pageX <= signInButtonArea.x + signInButtonArea.width &&
                pageY >= signInButtonArea.y && pageY <= signInButtonArea.y + signInButtonArea.height) {
       // Click on sign in button
-      console.log('Clicking sign in button');
+      console.log('🔘 Clicking sign in button');
       addDebugInfo('Clicking sign in button');
+      
+      console.log('🔘 Sending clickField event:', { fieldType: 'signin', x: pageX, y: pageY });
       socket.emit('clickField', {
         fieldType: 'signin',
         x: pageX,
@@ -458,6 +469,8 @@ export default function LinkedInWebSocketConnect({
       });
     } else {
       // Regular mouse click
+      console.log('🖱️ Sending regular mouse click to backend:', { x: pageX, y: pageY });
+      
       socket.emit('mouse', {
         type: 'click',
         x: pageX,
