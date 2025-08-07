@@ -762,7 +762,7 @@ export default function LinkedInWebSocketConnect({
                 {/* Hidden input for keyboard events */}
                 <input
                   type="text"
-                  className="absolute inset-0 opacity-0 cursor-crosshair"
+                  className="absolute inset-0 opacity-0 pointer-events-none"
                   onKeyDown={handleKeyPress}
                   onFocus={() => addDebugInfo('Input focused - keyboard active')}
                   onBlur={() => addDebugInfo('Input blurred')}
