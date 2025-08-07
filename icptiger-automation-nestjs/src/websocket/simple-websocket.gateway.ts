@@ -193,6 +193,12 @@ export class SimpleWebsocketGateway
         async ({ page }) => {
           this.logger.log(`[${userId}] LinkedIn login page loaded and ready`);
           
+          // Start CDP screencast
+          await this.startCDPScreencast(userId, client);
+          
+          // Send initial screenshot
+          await this.forceScreenshotUpdate(userId, client, page);
+          
           // Emit ready event to frontend
           client.emit('readyForLogin', {
             message: 'LinkedIn login page loaded, ready for user interaction',
@@ -801,21 +807,15 @@ export class SimpleWebsocketGateway
 
       cdpSession.on('Page.screencastFrame', async (data) => {
         try {
-          const base64Image = data.data;
-          const dataUrl = `data:image/jpeg;base64,${base64Image}`;
-          
-          console.log(`[${userId}] CDP screencast frame sent, size: ${base64Image.length} chars`);
-          
-          client.emit('screencast', {
-            data: dataUrl,
-            timestamp: Date.now()
-          });
+          // Skip CDP screencast frames - we'll use forceScreenshotUpdate instead
+          // This prevents the [object Object] issue
+          return;
         } catch (error) {
-          this.logger.error(`[${userId}] Error sending screencast frame:`, error);
+          this.logger.error(`[${userId}] Error in CDP screencast frame:`, error);
         }
       });
 
-      this.logger.log(`[${userId}] CDP screencast started successfully`);
+      this.logger.log(`[${userId}] CDP screencast started successfully (disabled for manual updates)`);
     } catch (error) {
       this.logger.error(`[${userId}] Failed to start CDP screencast:`, error);
     }
@@ -856,6 +856,9 @@ export class SimpleWebsocketGateway
           });
           
           await this.startCDPScreencast(userId, client);
+          
+          // Send initial screenshot
+          await this.forceScreenshotUpdate(userId, client, page);
           
           client.emit('loginStarted', {
             message: 'LinkedIn session recreated and ready',
