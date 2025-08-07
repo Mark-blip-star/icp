@@ -725,7 +725,7 @@ export class SimpleWebsocketGateway
         format: 'jpeg',
         quality: 80,
         maxWidth: 1920,
-        maxHeight: 1200
+        maxHeight: 1400
       });
 
       session.screencastRunning = true;

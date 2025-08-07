@@ -435,7 +435,7 @@ export default function LinkedInWebSocketConnect({
                 <canvas
                   ref={canvasRef}
                   width={1920}
-                  height={1200}
+                  height={1400}
                   className="w-full max-h-[70vh] object-contain cursor-crosshair"
                   onClick={handleCanvasClick}
                   onWheel={handleScroll}

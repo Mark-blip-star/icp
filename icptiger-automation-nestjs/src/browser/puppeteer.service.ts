@@ -43,7 +43,7 @@ export class PuppeteerService implements OnModuleInit {
         ],
         defaultViewport: {
           width: config.defaultViewport?.width ?? 1920,
-          height: config.defaultViewport?.height ?? 1200,
+          height: config.defaultViewport?.height ?? 1400,
         },
       };
 
@@ -70,7 +70,7 @@ export class PuppeteerService implements OnModuleInit {
       // Set larger viewport for better user experience
       await page.setViewport({
         width: 1920,
-        height: 1200,
+        height: 1400,
         deviceScaleFactor: 1,
       });
       
