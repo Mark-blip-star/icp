@@ -531,7 +531,10 @@ export class SimpleWebsocketGateway
               console.log('Browser: Input type:', input.type);
               console.log('Browser: Input placeholder:', input.placeholder);
               
-              // Return updated element info
+              // Get element position and dimensions
+              const rect = activeElement.getBoundingClientRect();
+              
+              // Return updated element info with position
               return {
                 tagName: activeElement.tagName,
                 type: input.type || '',
@@ -539,7 +542,13 @@ export class SimpleWebsocketGateway
                 className: activeElement.className,
                 value: input.value || '',
                 placeholder: input.placeholder || '',
-                cursorPosition: length
+                cursorPosition: length,
+                position: {
+                  x: rect.left,
+                  y: rect.top,
+                  width: rect.width,
+                  height: rect.height
+                }
               };
             }
             console.log('Browser: No active input element found');
@@ -548,8 +557,18 @@ export class SimpleWebsocketGateway
           
           console.log(`[${userId}] Updated element info:`, updatedElementInfo);
           
-          // Use sendInputUpdate to get proper position data
-          await this.sendInputUpdate(userId, client, session.page);
+          // Send updated element state to frontend with position
+          if (updatedElementInfo) {
+            const updateData = {
+              element: updatedElementInfo,
+              timestamp: Date.now()
+            };
+            console.log(`[${userId}] About to emit inputUpdated event...`);
+            client.emit('inputUpdated', updateData);
+            console.log(`[${userId}] ✅ SUCCESS: Sent input update to frontend:`, JSON.stringify(updateData, null, 2));
+          } else {
+            console.log(`[${userId}] ❌ No element info to send to frontend`);
+          }
         } catch (keyboardError) {
           console.error(`[${userId}] ❌ Keyboard action failed:`, keyboardError);
           console.error(`[${userId}] Error details:`, keyboardError.message);
@@ -806,6 +825,8 @@ export class SimpleWebsocketGateway
           const input = activeElement as HTMLInputElement;
           // Get element position and dimensions
           const rect = activeElement.getBoundingClientRect();
+          console.log('sendInputUpdate: Element rect:', rect);
+          
           const info = {
             tagName: activeElement.tagName,
             type: input.type || '',
@@ -822,7 +843,7 @@ export class SimpleWebsocketGateway
               height: rect.height
             }
           };
-          console.log('sendInputUpdate: Element info:', info);
+          console.log('sendInputUpdate: Element info with position:', info);
           return info;
         }
         console.log('sendInputUpdate: No active input element');
