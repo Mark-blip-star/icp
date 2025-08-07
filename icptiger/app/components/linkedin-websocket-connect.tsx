@@ -141,22 +141,36 @@ export default function LinkedInWebSocketConnect({
       });
 
       newSocket.on('inputUpdated', (data) => {
-        addDebugInfo(`Input updated: ${data.element.type} field`);
+        addDebugInfo(`Input updated: ${data.element.type} field - "${data.element.value}"`);
         
-        // Update input overlay based on element type
-        if (data.element.type === 'email' || data.element.placeholder?.toLowerCase().includes('email')) {
+        // Update input overlay based on element type and placeholder
+        const isEmailField = data.element.type === 'email' || 
+                           data.element.placeholder?.toLowerCase().includes('email') ||
+                           data.element.placeholder?.toLowerCase().includes('phone');
+        
+        const isPasswordField = data.element.type === 'password' ||
+                              data.element.placeholder?.toLowerCase().includes('password');
+        
+        if (isEmailField) {
           setInputOverlay(prev => ({
             ...prev,
             email: data.element.value,
             activeField: 'email',
             cursorPosition: data.element.cursorPosition
           }));
-        } else if (data.element.type === 'password') {
+        } else if (isPasswordField) {
           setInputOverlay(prev => ({
             ...prev,
             password: data.element.value,
             activeField: 'password',
             cursorPosition: data.element.cursorPosition
+          }));
+        } else {
+          // Clear active field if clicking elsewhere
+          setInputOverlay(prev => ({
+            ...prev,
+            activeField: null,
+            cursorPosition: 0
           }));
         }
       });

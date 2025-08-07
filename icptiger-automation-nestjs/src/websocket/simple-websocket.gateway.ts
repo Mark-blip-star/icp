@@ -460,6 +460,15 @@ export class SimpleWebsocketGateway
             console.log(`[${userId}] Key typed directly: ${event.key}`);
           }
           
+          // Special handling for backspace and delete
+          if (event.key === 'Backspace' || event.key === 'Delete') {
+            // Wait a bit for the deletion to complete
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          
+          // Always send update after any keyboard event
+          await this.sendInputUpdate(userId, client, session.page);
+          
           // Ensure the focused element is visible and cursor is positioned
           const updatedElementInfo = await session.page.evaluate(() => {
             const activeElement = document.activeElement;
@@ -736,6 +745,37 @@ export class SimpleWebsocketGateway
     } catch (error) {
       console.error(`[${userId}] Error recreating session:`, error);
       client.emit('error', 'Failed to recreate session');
+    }
+  }
+
+  private async sendInputUpdate(userId: string, client: Socket, page: any): Promise<void> {
+    try {
+      const activeElementInfo = await page.evaluate(() => {
+        const activeElement = document.activeElement;
+        if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+          const input = activeElement as HTMLInputElement;
+          return {
+            tagName: activeElement.tagName,
+            type: input.type || '',
+            id: activeElement.id,
+            className: activeElement.className,
+            value: input.value || '',
+            placeholder: input.placeholder || '',
+            cursorPosition: input.selectionStart || 0
+          };
+        }
+        return null;
+      });
+
+      if (activeElementInfo) {
+        client.emit('inputUpdated', {
+          element: activeElementInfo,
+          timestamp: Date.now()
+        });
+        console.log(`[${userId}] Sent input update:`, activeElementInfo);
+      }
+    } catch (error) {
+      console.log(`[${userId}] Error sending input update:`, error.message);
     }
   }
 } 
