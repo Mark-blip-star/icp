@@ -379,7 +379,15 @@ export default function LinkedInWebSocketConnect({
   };
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    console.log('🎯 handleCanvasClick called!', { socket: !!socket, canvasRef: !!canvasRef.current });
+    console.log('🎯 handleCanvasClick called!', { 
+      socket: !!socket, 
+      canvasRef: !!canvasRef.current,
+      isConnected,
+      screencastData: !!screencastData,
+      eventType: event.type,
+      clientX: event.clientX,
+      clientY: event.clientY
+    });
     
     if (!socket || !canvasRef.current) {
       console.log('❌ Early return - socket or canvas not available');
@@ -542,13 +550,19 @@ export default function LinkedInWebSocketConnect({
       const img = imageRef.current;
 
       img.onload = () => {
-        console.log('Frontend: Image loaded successfully');
+        console.log('Frontend: Image loaded successfully', { 
+          naturalWidth: img.naturalWidth, 
+          naturalHeight: img.naturalHeight 
+        });
         if (ctx) {
           // Set canvas size to match the natural image size
           canvas.width = img.naturalWidth;
           canvas.height = img.naturalHeight;
           ctx.drawImage(img, 0, 0);
-          console.log('Frontend: Canvas updated with image');
+          console.log('Frontend: Canvas updated with image', { 
+            canvasWidth: canvas.width, 
+            canvasHeight: canvas.height 
+          });
         }
       };
 
