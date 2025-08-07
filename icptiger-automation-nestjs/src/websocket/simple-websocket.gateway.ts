@@ -541,7 +541,26 @@ export class SimpleWebsocketGateway
                 height: rect.height
               });
               
-              // Return updated element info with position
+              // Try alternative position calculation
+              const computedStyle = window.getComputedStyle(activeElement);
+              const offsetLeft = (activeElement as HTMLElement).offsetLeft;
+              const offsetTop = (activeElement as HTMLElement).offsetTop;
+              const clientLeft = (activeElement as HTMLElement).clientLeft;
+              const clientTop = (activeElement as HTMLElement).clientTop;
+              
+              console.log('Browser: Alternative position values:', {
+                offsetLeft,
+                offsetTop,
+                clientLeft,
+                clientTop,
+                computedStyle: {
+                  margin: computedStyle.margin,
+                  padding: computedStyle.padding,
+                  border: computedStyle.border
+                }
+              });
+              
+              // Return updated element info with multiple position options
               const elementInfo = {
                 tagName: activeElement.tagName,
                 type: input.type || '',
@@ -555,10 +574,21 @@ export class SimpleWebsocketGateway
                   y: rect.top,
                   width: rect.width,
                   height: rect.height
-                }
+                },
+                // Alternative position data
+                altPosition: {
+                  x: offsetLeft,
+                  y: offsetTop,
+                  width: (activeElement as HTMLElement).offsetWidth,
+                  height: (activeElement as HTMLElement).offsetHeight
+                },
+                // CSS selector for finding element
+                selector: activeElement.id ? `#${activeElement.id}` : 
+                         activeElement.className ? `.${activeElement.className.split(' ')[0]}` :
+                         `${activeElement.tagName.toLowerCase()}[type="${input.type}"]`
               };
               
-              console.log('Browser: Returning element info with position:', elementInfo);
+              console.log('Browser: Returning element info with multiple position options:', elementInfo);
               return elementInfo;
             }
             console.log('Browser: No active input element found');

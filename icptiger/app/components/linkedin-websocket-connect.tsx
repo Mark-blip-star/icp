@@ -172,8 +172,34 @@ export default function LinkedInWebSocketConnect({
           if (isEmailField) {
             console.log('Frontend: Updating email field with value:', data.element.value);
             console.log('Frontend: Position data:', data.element.position);
+            console.log('Frontend: Alt position data:', data.element.altPosition);
+            console.log('Frontend: Selector:', data.element.selector);
             console.log('Frontend: Position type:', typeof data.element.position);
             console.log('Frontend: Position keys:', data.element.position ? Object.keys(data.element.position) : 'undefined');
+            
+            // Try to find position using multiple methods
+            let finalPosition = data.element.position;
+            
+            if (!finalPosition || finalPosition.x === 0) {
+              console.log('Frontend: Using alt position');
+              finalPosition = data.element.altPosition;
+            }
+            
+            if (!finalPosition || finalPosition.x === 0) {
+              console.log('Frontend: Trying to find element by selector');
+              // Try to find element on frontend and get its position
+              const element = document.querySelector(data.element.selector);
+              if (element) {
+                const rect = element.getBoundingClientRect();
+                finalPosition = {
+                  x: rect.left,
+                  y: rect.top,
+                  width: rect.width,
+                  height: rect.height
+                };
+                console.log('Frontend: Found element by selector, position:', finalPosition);
+              }
+            }
             
             setInputOverlay(prev => {
               const newState = {
@@ -181,7 +207,7 @@ export default function LinkedInWebSocketConnect({
                 email: data.element.value,
                 activeField: 'email' as const,
                 cursorPosition: data.element.cursorPosition,
-                position: data.element.position
+                position: finalPosition
               };
               console.log('Frontend: New email overlay state:', newState);
               return newState;
