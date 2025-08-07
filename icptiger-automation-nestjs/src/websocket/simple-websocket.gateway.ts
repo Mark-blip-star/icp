@@ -803,6 +803,8 @@ export class SimpleWebsocketGateway
         
         if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
           const input = activeElement as HTMLInputElement;
+          // Get element position and dimensions
+          const rect = activeElement.getBoundingClientRect();
           const info = {
             tagName: activeElement.tagName,
             type: input.type || '',
@@ -810,7 +812,14 @@ export class SimpleWebsocketGateway
             className: activeElement.className,
             value: input.value || '',
             placeholder: input.placeholder || '',
-            cursorPosition: input.value.length // Use value length instead of selectionStart
+            cursorPosition: input.value.length,
+            // Position and size for overlay
+            position: {
+              x: rect.left,
+              y: rect.top,
+              width: rect.width,
+              height: rect.height
+            }
           };
           console.log('sendInputUpdate: Element info:', info);
           return info;

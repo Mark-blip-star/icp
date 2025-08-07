@@ -39,6 +39,12 @@ export default function LinkedInWebSocketConnect({
     password: string;
     activeField: 'email' | 'password' | null;
     cursorPosition: number;
+    position?: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
   }>({
     email: '',
     password: '',
@@ -169,7 +175,8 @@ export default function LinkedInWebSocketConnect({
                 ...prev,
                 email: data.element.value,
                 activeField: 'email' as const,
-                cursorPosition: data.element.cursorPosition
+                cursorPosition: data.element.cursorPosition,
+                position: data.element.position
               };
               console.log('Frontend: New email overlay state:', newState);
               return newState;
@@ -181,7 +188,8 @@ export default function LinkedInWebSocketConnect({
                 ...prev,
                 password: data.element.value,
                 activeField: 'password' as const,
-                cursorPosition: data.element.cursorPosition
+                cursorPosition: data.element.cursorPosition,
+                position: data.element.position
               };
               console.log('Frontend: New password overlay state:', newState);
               return newState;
@@ -192,7 +200,8 @@ export default function LinkedInWebSocketConnect({
             setInputOverlay(prev => ({
               ...prev,
               activeField: null,
-              cursorPosition: 0
+              cursorPosition: 0,
+              position: undefined
             }));
           }
         } else {
@@ -450,59 +459,50 @@ export default function LinkedInWebSocketConnect({
                 />
                 
                 {/* Input overlay for real-time text display */}
-                {(inputOverlay.email || inputOverlay.password) && (
-                  <div className="absolute inset-0 pointer-events-none">
-                    {/* Email field overlay */}
-                    {inputOverlay.email && (
-                      <div 
-                        className="absolute bg-white text-black px-3 py-2 rounded border-2 border-blue-500 font-mono text-sm shadow-lg z-10"
-                        style={{
-                          top: '25%',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          minWidth: '300px',
-                          maxWidth: '400px'
-                        }}
-                      >
-                        <div className="flex items-center">
-                          <span className={`mr-2 ${inputOverlay.activeField === 'email' ? 'text-blue-600' : 'text-gray-500'}`}>
-                            📧 Email: {inputOverlay.activeField === 'email' && '✓'}
-                          </span>
-                          <span className="flex-1">
-                            {inputOverlay.email}
-                            {inputOverlay.activeField === 'email' && (
-                              <span className="inline-block w-0.5 h-4 bg-black ml-1 animate-pulse"></span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Password field overlay */}
-                    {inputOverlay.password && (
-                      <div 
-                        className="absolute bg-white text-black px-3 py-2 rounded border-2 border-blue-500 font-mono text-sm shadow-lg z-10"
-                        style={{
-                          top: '35%',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          minWidth: '300px',
-                          maxWidth: '400px'
-                        }}
-                      >
-                        <div className="flex items-center">
-                          <span className={`mr-2 ${inputOverlay.activeField === 'password' ? 'text-blue-600' : 'text-gray-500'}`}>
-                            🔒 Password: {inputOverlay.activeField === 'password' && '✓'}
-                          </span>
-                          <span className="flex-1">
-                            {'•'.repeat(inputOverlay.password.length)}
-                            {inputOverlay.activeField === 'password' && (
-                              <span className="inline-block w-0.5 h-4 bg-black ml-1 animate-pulse"></span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                {inputOverlay.position && (inputOverlay.email || inputOverlay.password) && (
+                  <div className="absolute inset-0">
+                    {/* Dynamic overlay positioned exactly over the real field */}
+                    <div 
+                      className="absolute bg-white text-black px-2 py-1 rounded border-2 border-blue-500 font-mono text-sm shadow-lg z-10 cursor-text"
+                      style={{
+                        left: `${inputOverlay.position.x}px`,
+                        top: `${inputOverlay.position.y}px`,
+                        width: `${inputOverlay.position.width}px`,
+                        height: `${inputOverlay.position.height}px`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-start',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        borderColor: inputOverlay.activeField ? '#3b82f6' : '#e5e7eb'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Simulate click on the real field
+                        if (canvasRef.current) {
+                          const canvas = canvasRef.current;
+                          const rect = canvas.getBoundingClientRect();
+                          const x = inputOverlay.position!.x + rect.left;
+                          const y = inputOverlay.position!.y + rect.top;
+                          
+                          // Create and dispatch mouse event
+                          const clickEvent = new MouseEvent('click', {
+                            clientX: x,
+                            clientY: y,
+                            bubbles: true,
+                            cancelable: true
+                          });
+                          canvas.dispatchEvent(clickEvent);
+                        }
+                      }}
+                    >
+                      <span className="truncate">
+                        {inputOverlay.activeField === 'email' ? inputOverlay.email : 
+                         inputOverlay.activeField === 'password' ? '•'.repeat(inputOverlay.password.length) : ''}
+                        {inputOverlay.activeField && (
+                          <span className="inline-block w-0.5 h-4 bg-black ml-1 animate-pulse"></span>
+                        )}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
