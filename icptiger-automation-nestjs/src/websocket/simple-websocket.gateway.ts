@@ -714,7 +714,7 @@ export class SimpleWebsocketGateway
         
         const screenshot = await session.page.screenshot({
           type: 'jpeg',
-          quality: 80,
+          quality: 100,
           fullPage: false
         }) as Buffer;
         
@@ -828,6 +828,75 @@ export class SimpleWebsocketGateway
     } catch (error) {
       this.logger.error(`[${userId}] Get session status error:`, error);
       client.emit('error', 'Failed to get session status');
+    }
+  }
+
+  @SubscribeMessage('clickField')
+  async handleClickField(
+    @MessageBody() data: any,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const query = client.handshake.query as any;
+    const userId = query.user_id as string;
+
+    if (!userId) return;
+
+    this.logger.log(`[${userId}] Click field requested:`, data);
+
+    try {
+      const session = await this.linkedInAutomationService.getSessionInfo(userId);
+      if (session && session.page) {
+        const { fieldType, x, y } = data;
+        
+        // Map field types to LinkedIn selectors
+        let selector = '';
+        switch (fieldType) {
+          case 'email':
+            selector = 'input[type="email"], input[name="session_key"], #username';
+            break;
+          case 'password':
+            selector = 'input[type="password"], input[name="session_password"], #password';
+            break;
+          default:
+            selector = fieldType;
+        }
+
+        // Try to click by selector first
+        try {
+          await session.page.waitForSelector(selector, { timeout: 2000 });
+          await session.page.click(selector);
+          this.logger.log(`[${userId}] ✅ Clicked field by selector: ${selector}`);
+        } catch (selectorError) {
+          // If selector fails, try clicking by coordinates
+          if (x !== undefined && y !== undefined) {
+            await session.page.mouse.click(x, y);
+            this.logger.log(`[${userId}] ✅ Clicked field by coordinates: ${x}, ${y}`);
+          } else {
+            throw selectorError;
+          }
+        }
+
+        // Force screenshot update after click
+        await this.forceScreenshotUpdate(userId, client, session.page);
+        
+        client.emit('fieldClicked', { 
+          success: true, 
+          fieldType, 
+          selector,
+          timestamp: Date.now() 
+        });
+      } else {
+        client.emit('fieldClicked', { 
+          success: false, 
+          error: 'No active session' 
+        });
+      }
+    } catch (error) {
+      this.logger.error(`[${userId}] Error clicking field:`, error);
+      client.emit('fieldClicked', { 
+        success: false, 
+        error: error.message 
+      });
     }
   }
 
@@ -1016,7 +1085,7 @@ export class SimpleWebsocketGateway
       // Take a manual screenshot and send it
       const screenshot = await page.screenshot({
         type: 'jpeg',
-        quality: 80,
+        quality: 100,
         fullPage: false
       }) as Buffer;
       

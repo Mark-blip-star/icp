@@ -52,6 +52,9 @@ export default function LinkedInWebSocketConnect({
     cursorPosition: 0
   });
 
+  const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
+  const [cursorType, setCursorType] = useState<'default' | 'pointer' | 'text'>('default');
+
   // Log overlay state changes
   useEffect(() => {
     console.log('Frontend: Input overlay state changed:', inputOverlay);
@@ -272,6 +275,31 @@ export default function LinkedInWebSocketConnect({
         }
       });
 
+      newSocket.on('fieldClicked', (data) => {
+        console.log('Frontend: Received fieldClicked event:', data);
+        
+        if (data.success) {
+          addDebugInfo(`Field clicked successfully: ${data.fieldType}`);
+          
+          // Update active field based on the clicked field
+          if (data.fieldType === 'email') {
+            setInputOverlay(prev => ({
+              ...prev,
+              activeField: 'email',
+              cursorPosition: prev.email.length
+            }));
+          } else if (data.fieldType === 'password') {
+            setInputOverlay(prev => ({
+              ...prev,
+              activeField: 'password',
+              cursorPosition: prev.password.length
+            }));
+          }
+        } else {
+          addDebugInfo(`Field click failed: ${data.error}`);
+        }
+      });
+
       newSocket.on('error', (data) => {
         setError(data);
         addDebugInfo(`Error: ${data}`);
@@ -303,6 +331,36 @@ export default function LinkedInWebSocketConnect({
     socket.emit('closeSession');
   };
 
+  const handleCanvasMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    // Scale coordinates to match the actual image size
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const scaledX = x * scaleX;
+    const scaledY = y * scaleY;
+
+    setCursorPosition({ x: scaledX, y: scaledY });
+
+    // Determine cursor type based on position
+    const emailFieldArea = { x: 448, y: 264, width: 304, height: 52 };
+    const passwordFieldArea = { x: 448, y: 316, width: 304, height: 52 };
+
+    if ((scaledX >= emailFieldArea.x && scaledX <= emailFieldArea.x + emailFieldArea.width &&
+         scaledY >= emailFieldArea.y && scaledY <= emailFieldArea.y + emailFieldArea.height) ||
+        (scaledX >= passwordFieldArea.x && scaledX <= passwordFieldArea.x + passwordFieldArea.width &&
+         scaledY >= passwordFieldArea.y && scaledY <= passwordFieldArea.y + passwordFieldArea.height)) {
+      setCursorType('text');
+    } else {
+      setCursorType('pointer');
+    }
+  };
+
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!socket || !canvasRef.current) return;
 
@@ -321,11 +379,52 @@ export default function LinkedInWebSocketConnect({
 
     addDebugInfo(`Mouse click at display (${Math.round(x)}, ${Math.round(y)}) -> page (${Math.round(pageX)}, ${Math.round(pageY)})`);
     
-    socket.emit('mouse', {
-      type: 'click',
-      x: pageX,
-      y: pageY,
-    });
+    // Check if click is on email or password field areas (approximate LinkedIn positions)
+    const emailFieldArea = { x: 448, y: 264, width: 304, height: 52 };
+    const passwordFieldArea = { x: 448, y: 316, width: 304, height: 52 };
+
+    if (pageX >= emailFieldArea.x && pageX <= emailFieldArea.x + emailFieldArea.width &&
+        pageY >= emailFieldArea.y && pageY <= emailFieldArea.y + emailFieldArea.height) {
+      // Click on email field
+      console.log('Clicking email field');
+      addDebugInfo('Clicking email field');
+      socket.emit('clickField', {
+        fieldType: 'email',
+        x: pageX,
+        y: pageY
+      });
+      
+      // Update local state
+      setInputOverlay(prev => ({
+        ...prev,
+        activeField: 'email',
+        cursorPosition: prev.email.length
+      }));
+    } else if (pageX >= passwordFieldArea.x && pageX <= passwordFieldArea.x + passwordFieldArea.width &&
+               pageY >= passwordFieldArea.y && pageY <= passwordFieldArea.y + passwordFieldArea.height) {
+      // Click on password field
+      console.log('Clicking password field');
+      addDebugInfo('Clicking password field');
+      socket.emit('clickField', {
+        fieldType: 'password',
+        x: pageX,
+        y: pageY
+      });
+      
+      // Update local state
+      setInputOverlay(prev => ({
+        ...prev,
+        activeField: 'password',
+        cursorPosition: prev.password.length
+      }));
+    } else {
+      // Regular mouse click
+      socket.emit('mouse', {
+        type: 'click',
+        x: pageX,
+        y: pageY,
+      });
+    }
   };
 
   const handleKeyPress = (event: React.KeyboardEvent) => {
@@ -504,21 +603,42 @@ export default function LinkedInWebSocketConnect({
               <div className="border rounded-lg overflow-hidden bg-black relative">
                 <canvas
                   ref={canvasRef}
-                  className="w-full h-auto max-h-[70vh] object-contain cursor-crosshair"
-                  onClick={handleCanvasClick}
-                  onDoubleClick={handleCanvasClick}
-                  onWheel={handleScroll}
+                  className="w-full h-auto max-h-[70vh] object-contain"
                   style={{ 
                     imageRendering: 'pixelated',
                     maxWidth: '100%',
-                    height: 'auto'
+                    height: 'auto',
+                    cursor: cursorType === 'text' ? 'text' : cursorType === 'pointer' ? 'pointer' : 'crosshair'
                   }}
+                  onClick={handleCanvasClick}
+                  onDoubleClick={handleCanvasClick}
+                  onMouseMove={handleCanvasMouseMove}
+                  onWheel={handleScroll}
                 />
                 <img
                   ref={imageRef}
                   style={{ display: 'none' }}
                   alt="Screencast"
                 />
+                
+                {/* LinkedIn-style cursor overlay */}
+                {cursorPosition && (
+                  <div 
+                    className="absolute pointer-events-none z-20"
+                    style={{
+                      left: `${(cursorPosition.x / (canvasRef.current?.width || 1)) * 100}%`,
+                      top: `${(cursorPosition.y / (canvasRef.current?.height || 1)) * 100}%`,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  >
+                    <div className="w-6 h-6 bg-blue-500 rounded-full opacity-80 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
+                    {cursorType === 'text' && (
+                      <div className="absolute top-6 left-3 w-0.5 h-4 bg-blue-500 animate-pulse"></div>
+                    )}
+                  </div>
+                )}
                 
                 {/* Hidden input for keyboard events */}
                 <input
