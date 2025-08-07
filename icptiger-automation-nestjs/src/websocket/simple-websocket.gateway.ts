@@ -262,8 +262,15 @@ export class SimpleWebsocketGateway
                     (element as HTMLElement).focus();
                     (element as HTMLElement).click();
                     
-                    // Ensure cursor is visible
-                    (element as HTMLInputElement).setSelectionRange(0, 0);
+                    // Ensure cursor is visible (only for supported input types)
+                    try {
+                      const input = element as HTMLInputElement;
+                      if (input.type === 'text' || input.type === 'textarea' || input.type === '') {
+                        input.setSelectionRange(0, 0);
+                      }
+                    } catch (error) {
+                      console.log('Error setting selection range:', error.message);
+                    }
                     
                     console.log('Input field focused, cleared, and cursor positioned');
                   }
@@ -292,7 +299,14 @@ export class SimpleWebsocketGateway
                       await session.page.evaluate((element) => {
                         (element as HTMLInputElement).value = '';
                         (element as HTMLElement).focus();
-                        (element as HTMLInputElement).setSelectionRange(0, 0);
+                        try {
+                          const input = element as HTMLInputElement;
+                          if (input.type === 'text' || input.type === 'textarea' || input.type === '') {
+                            input.setSelectionRange(0, 0);
+                          }
+                        } catch (error) {
+                          console.log('Error setting selection range:', error.message);
+                        }
                       }, emailField);
                       
                       console.log(`[${userId}] Clicked, focused, and cleared email field`);
@@ -336,7 +350,14 @@ export class SimpleWebsocketGateway
                       await session.page.evaluate((element) => {
                         (element as HTMLInputElement).value = '';
                         (element as HTMLElement).focus();
-                        (element as HTMLInputElement).setSelectionRange(0, 0);
+                        try {
+                          const input = element as HTMLInputElement;
+                          if (input.type === 'text' || input.type === 'textarea' || input.type === '') {
+                            input.setSelectionRange(0, 0);
+                          }
+                        } catch (error) {
+                          console.log('Error setting selection range:', error.message);
+                        }
                       }, passwordField);
                       
                       console.log(`[${userId}] Clicked, focused, and cleared password field`);
