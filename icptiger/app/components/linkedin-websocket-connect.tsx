@@ -155,11 +155,24 @@ export default function LinkedInWebSocketConnect({
         console.log('Frontend: Data.data starts with:', data.data ? data.data.substring(0, 50) : 'no data');
         console.log('Frontend: Data.data length:', data.data ? data.data.length : 'no data');
         
-        if (data.data && typeof data.data === 'string' && data.data.startsWith('data:image/jpeg;base64,')) {
-          setScreencastData(data.data);
-          console.log('Frontend: ✅ Valid screenshot data set');
+        // Check for double base64 issue
+        if (data.data && typeof data.data === 'string') {
+          if (data.data.includes('data:image/jpeg;base64,data:image/jpeg;base64,')) {
+            console.error('Frontend: ❌ DOUBLE BASE64 DETECTED! This is the bug!');
+            console.error('Frontend: Double base64 data:', data.data.substring(0, 100) + '...');
+          } else if (data.data.startsWith('data:image/jpeg;base64,')) {
+            console.log('Frontend: ✅ Valid single base64 data detected');
+            setScreencastData(data.data);
+            console.log('Frontend: ✅ Screenshot data set successfully');
+          } else if (data.data.startsWith('data:image/png;base64,')) {
+            console.log('Frontend: ✅ Valid PNG base64 data detected');
+            setScreencastData(data.data);
+            console.log('Frontend: ✅ PNG screenshot data set successfully');
+          } else {
+            console.error('Frontend: ❌ Invalid data URL format:', data.data.substring(0, 50));
+          }
         } else {
-          console.error('Frontend: ❌ Invalid screenshot data format:', data.data);
+          console.error('Frontend: ❌ No data or invalid data type:', data.data);
         }
       });
 
@@ -369,20 +382,32 @@ export default function LinkedInWebSocketConnect({
   // Update canvas when screencast data changes
   useEffect(() => {
     if (screencastData && canvasRef.current && imageRef.current) {
+      console.log('Frontend: Updating canvas with screencast data');
+      console.log('Frontend: Screencast data length:', screencastData.length);
+      console.log('Frontend: Screencast data starts with:', screencastData.substring(0, 50));
+      
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       const img = imageRef.current;
 
       img.onload = () => {
+        console.log('Frontend: Image loaded successfully');
         if (ctx) {
           // Set canvas size to match the natural image size
           canvas.width = img.naturalWidth;
           canvas.height = img.naturalHeight;
           ctx.drawImage(img, 0, 0);
+          console.log('Frontend: Canvas updated with image');
         }
       };
 
-      img.src = `data:image/jpeg;base64,${screencastData}`;
+      img.onerror = (error) => {
+        console.error('Frontend: Image load error:', error);
+        console.error('Frontend: Failed to load image from:', screencastData.substring(0, 100));
+      };
+
+      img.src = screencastData;
+      console.log('Frontend: Set image src to screencast data');
     }
   }, [screencastData]);
 

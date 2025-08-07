@@ -694,24 +694,89 @@ export class SimpleWebsocketGateway
     const query = client.handshake.query as any;
     const userId = query.user_id as string;
 
-    if (!userId) return;
+    if (!userId) {
+      this.logger.error('No user_id provided for screenshot request');
+      return;
+    }
 
     this.logger.log(`[${userId}] Screenshot requested`);
     
     try {
       const session = await this.linkedInAutomationService.getSessionInfo(userId);
+      this.logger.log(`[${userId}] Session info retrieved:`, {
+        hasSession: !!session,
+        hasPage: !!(session && session.page),
+        pageUrl: session?.page?.url() || 'no page'
+      });
+      
       if (session && session.page) {
+        this.logger.log(`[${userId}] Taking screenshot from page: ${session.page.url()}`);
+        
         const screenshot = await session.page.screenshot({
-          type: 'png',
+          type: 'jpeg',
+          quality: 80,
+          fullPage: false
+        }) as Buffer;
+        
+        this.logger.log(`[${userId}] Screenshot taken successfully, buffer size: ${screenshot.length} bytes`);
+        
+        const base64Image = screenshot.toString('base64');
+        this.logger.log(`[${userId}] Base64 conversion successful, length: ${base64Image.length} chars`);
+        
+        const dataUrl = `data:image/jpeg;base64,${base64Image}`;
+        this.logger.log(`[${userId}] Data URL created, length: ${dataUrl.length} chars`);
+        this.logger.log(`[${userId}] Data URL starts with: ${dataUrl.substring(0, 50)}...`);
+        
+        // Validate base64 data
+        try {
+          const base64Data = dataUrl.replace('data:image/jpeg;base64,', '');
+          Buffer.from(base64Data, 'base64');
+          this.logger.log(`[${userId}] ✅ Base64 validation successful`);
+        } catch (validationError) {
+          this.logger.error(`[${userId}] ❌ Base64 validation failed:`, validationError);
+        }
+        
+        const screencastData = {
+          data: dataUrl,
+          timestamp: Date.now()
+        };
+        
+        this.logger.log(`[${userId}] Emitting screencast data:`, {
+          dataType: typeof screencastData.data,
+          dataLength: screencastData.data.length,
+          timestamp: screencastData.timestamp
         });
         
-        client.emit('screencast', screenshot.toString());
+        client.emit('screencast', screencastData);
+        this.logger.log(`[${userId}] ✅ Screenshot sent successfully`);
       } else {
-        client.emit('screencast', 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+        this.logger.warn(`[${userId}] No valid session or page found, sending default image`);
+        
+        const defaultImage = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        const dataUrl = `data:image/png;base64,${defaultImage}`;
+        
+        const screencastData = {
+          data: dataUrl,
+          timestamp: Date.now()
+        };
+        
+        this.logger.log(`[${userId}] Sending default image, data length: ${dataUrl.length}`);
+        client.emit('screencast', screencastData);
       }
     } catch (error) {
       this.logger.error(`[${userId}] Screenshot error:`, error);
-      client.emit('screencast', 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+      this.logger.error(`[${userId}] Error stack:`, error.stack);
+      
+      const defaultImage = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const dataUrl = `data:image/png;base64,${defaultImage}`;
+      
+      const screencastData = {
+        data: dataUrl,
+        timestamp: Date.now()
+      };
+      
+      this.logger.log(`[${userId}] Sending error fallback image`);
+      client.emit('screencast', screencastData);
     }
   }
 
@@ -953,7 +1018,7 @@ export class SimpleWebsocketGateway
         type: 'jpeg',
         quality: 80,
         fullPage: false
-      });
+      }) as Buffer;
       
       const base64Image = screenshot.toString('base64');
       const dataUrl = `data:image/jpeg;base64,${base64Image}`;
