@@ -221,6 +221,12 @@ export class SimpleWebsocketGateway
 
     this.logger.log(`[${userId}] Mouse event: ${event.type} at (${event.x}, ${event.y})`);
     console.log(`[${userId}] Mouse event received:`, event);
+    console.log(`[${userId}] Event details:`, {
+      type: event.type,
+      x: event.x,
+      y: event.y,
+      timestamp: Date.now()
+    });
 
     try {
       const session = await this.linkedInAutomationService.getSessionInfo(userId);
@@ -231,7 +237,10 @@ export class SimpleWebsocketGateway
           
           if (event.type === "click") {
             await session.page.mouse.click(event.x, event.y);
-            console.log(`[${userId}] Mouse clicked at (${event.x}, ${event.y})`);
+            console.log(`[${userId}] ✅ SUCCESS: Mouse clicked at (${event.x}, ${event.y})`);
+            
+            // Send input update after click to show current state
+            await this.sendInputUpdate(userId, client, session.page);
             
             // Check what element was clicked and focus if it's an input
             try {

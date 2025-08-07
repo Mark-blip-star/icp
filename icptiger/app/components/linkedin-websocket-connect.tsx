@@ -255,19 +255,20 @@ export default function LinkedInWebSocketConnect({
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
-    // Scale coordinates to match the actual page size
-    const scaleX = 1920 / canvas.width;
-    const scaleY = 1080 / canvas.height;
+    // Calculate the scale factor between display size and actual canvas size
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
     
-    const scaledX = x * scaleX;
-    const scaledY = y * scaleY;
+    // Convert display coordinates to actual page coordinates
+    const pageX = x * scaleX;
+    const pageY = y * scaleY;
 
-    addDebugInfo(`Mouse click at (${Math.round(scaledX)}, ${Math.round(scaledY)})`);
+    addDebugInfo(`Mouse click at display (${Math.round(x)}, ${Math.round(y)}) -> page (${Math.round(pageX)}, ${Math.round(pageY)})`);
     
     socket.emit('mouse', {
       type: 'click',
-      x: scaledX,
-      y: scaledY,
+      x: pageX,
+      y: pageY,
     });
   };
 
@@ -437,6 +438,7 @@ export default function LinkedInWebSocketConnect({
                   ref={canvasRef}
                   className="w-full max-h-[70vh] object-contain cursor-crosshair"
                   onClick={handleCanvasClick}
+                  onDoubleClick={handleCanvasClick}
                   onWheel={handleScroll}
                   style={{ imageRendering: 'pixelated' }}
                 />
