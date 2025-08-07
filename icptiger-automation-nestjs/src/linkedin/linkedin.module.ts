@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from '../database/database.module';
-import { LinkedInSettingsService } from './settings.service';
 import { LinkedInAutomationService } from './automation.service';
+import { LinkedInSettingsService } from './settings.service';
+import { DatabaseModule } from '../database/database.module';
+import { BrowserModule } from '../browser/browser.module';
 
 @Module({
-  imports: [DatabaseModule],
-  providers: [LinkedInSettingsService, LinkedInAutomationService],
-  exports: [LinkedInSettingsService, LinkedInAutomationService],
+  imports: [DatabaseModule, BrowserModule],
+  providers: [LinkedInAutomationService, LinkedInSettingsService],
+  exports: [LinkedInAutomationService, LinkedInSettingsService],
 })
 export class LinkedInModule {} 

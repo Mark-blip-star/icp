@@ -1,23 +1,27 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { LinkedInModule } from './linkedin/linkedin.module';
 import { JobsModule } from './jobs/jobs.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
-import { JobsController } from './api/jobs/jobs.controller';
-import { SchedulerController } from './api/scheduler/scheduler.controller';
+import { WebsocketModule } from './websocket/websocket.module';
+import configuration from './config/configuration';
 
 @Module({
   imports: [
-    ConfigModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration],
+    }),
     DatabaseModule,
-    LinkedInModule, 
+    LinkedInModule,
     JobsModule,
     SchedulerModule,
+    WebsocketModule,
   ],
-  controllers: [AppController, JobsController, SchedulerController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
