@@ -157,6 +157,7 @@ export default function LinkedInWebSocketConnect({
         if (data.element) {
           addDebugInfo(`Input updated: ${data.element.type} field - "${data.element.value}"`);
           console.log('Frontend: Processing element update:', data.element);
+          console.log('Frontend: Element position:', data.element.position);
           
           // Update input overlay based on element type and placeholder
           const isEmailField = data.element.type === 'email' || 
@@ -171,6 +172,9 @@ export default function LinkedInWebSocketConnect({
           if (isEmailField) {
             console.log('Frontend: Updating email field with value:', data.element.value);
             console.log('Frontend: Position data:', data.element.position);
+            console.log('Frontend: Position type:', typeof data.element.position);
+            console.log('Frontend: Position keys:', data.element.position ? Object.keys(data.element.position) : 'undefined');
+            
             setInputOverlay(prev => {
               const newState = {
                 ...prev,

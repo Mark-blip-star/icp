@@ -533,9 +533,16 @@ export class SimpleWebsocketGateway
               
               // Get element position and dimensions
               const rect = activeElement.getBoundingClientRect();
+              console.log('Browser: Element rect:', rect);
+              console.log('Browser: Rect values:', {
+                left: rect.left,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height
+              });
               
               // Return updated element info with position
-              return {
+              const elementInfo = {
                 tagName: activeElement.tagName,
                 type: input.type || '',
                 id: activeElement.id,
@@ -550,12 +557,16 @@ export class SimpleWebsocketGateway
                   height: rect.height
                 }
               };
+              
+              console.log('Browser: Returning element info with position:', elementInfo);
+              return elementInfo;
             }
             console.log('Browser: No active input element found');
             return null;
           });
           
           console.log(`[${userId}] Updated element info:`, updatedElementInfo);
+          console.log(`[${userId}] Position in element info:`, updatedElementInfo?.position);
           
           // Send updated element state to frontend with position
           if (updatedElementInfo) {
@@ -564,6 +575,7 @@ export class SimpleWebsocketGateway
               timestamp: Date.now()
             };
             console.log(`[${userId}] About to emit inputUpdated event...`);
+            console.log(`[${userId}] Update data with position:`, JSON.stringify(updateData, null, 2));
             client.emit('inputUpdated', updateData);
             console.log(`[${userId}] ✅ SUCCESS: Sent input update to frontend:`, JSON.stringify(updateData, null, 2));
           } else {
