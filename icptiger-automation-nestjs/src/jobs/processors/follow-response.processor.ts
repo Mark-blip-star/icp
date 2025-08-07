@@ -4,7 +4,7 @@ import { BaseProcessor } from './base.processor';
 import { JobData } from '../queue.service';
 import { SupabaseService } from '../../database/supabase.service';
 import { LinkedInSettingsService } from '../../linkedin/settings.service';
-import { LinkedInAutomationService } from '../../linkedin/automation.service';
+
 import { Campaign, LinkedInConnection } from '../../common/types/campaign.types';
 
 @Injectable()
@@ -13,8 +13,7 @@ export class FollowResponseProcessor extends BaseProcessor {
 
   constructor(
     supabaseService: SupabaseService,
-    private linkedinSettingsService: LinkedInSettingsService,
-    private linkedinAutomationService: LinkedInAutomationService
+    private linkedinSettingsService: LinkedInSettingsService
   ) {
     super(supabaseService);
   }
@@ -127,13 +126,10 @@ export class FollowResponseProcessor extends BaseProcessor {
     this.logger.log(`Found ${connectionsNeedingFollowUp.length} connections needing follow-up for campaign ${campaign.id}`);
 
     // Process follow-up messages
-    await this.linkedinAutomationService.runWithLogin(
-      campaign,
-      accountData,
-      async ({ page }) => {
-        await this.sendFollowUpMessages(page, campaign, connectionsNeedingFollowUp, quotas.remainingMessages);
-      }
-    );
+    // TODO: Implement WebSocket-based message sending
+    // For now, just simulate the process
+    this.logger.log(`Would process ${connectionsNeedingFollowUp.length} follow-up messages for campaign ${campaign.id}`);
+    await this.sendFollowUpMessages(null, campaign, connectionsNeedingFollowUp, quotas.remainingMessages);
   }
 
   /**
@@ -219,18 +215,18 @@ export class FollowResponseProcessor extends BaseProcessor {
         }
 
         // Personalize message
-        const personalizedMessage = this.linkedinAutomationService.personalizeMessage(
+        const personalizedMessage = this.personalizeMessage(
           messageTemplate,
           connection.display_name || connection.first_name || 'there',
           connection.current_company || ''
         );
 
-        // Send message via LinkedIn
-        await this.linkedinAutomationService.sendMessage(
-          page,
-          connection.profile_url,
-          personalizedMessage
-        );
+        // TODO: Implement message sending via WebSocket or API
+        // For now, just log the message that would be sent
+        this.logger.log(`Would send message to ${connection.display_name}: ${personalizedMessage.substring(0, 100)}...`);
+        
+        // Simulate message sending delay
+        await this.delay(2000);
 
         // Update database
         const updateData = isFirstFollowUp
