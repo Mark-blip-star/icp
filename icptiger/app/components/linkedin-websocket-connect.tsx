@@ -386,7 +386,17 @@ export default function LinkedInWebSocketConnect({
       screencastData: !!screencastData,
       eventType: event.type,
       clientX: event.clientX,
-      clientY: event.clientY
+      clientY: event.clientY,
+      target: event.target,
+      currentTarget: event.currentTarget
+    });
+    
+    // Додаємо додаткове логування для дебагу
+    console.log('🎯 Canvas element:', {
+      canvas: canvasRef.current,
+      canvasWidth: canvasRef.current?.width,
+      canvasHeight: canvasRef.current?.height,
+      canvasStyle: canvasRef.current?.style
     });
     
     if (!socket || !canvasRef.current) {
@@ -563,6 +573,16 @@ export default function LinkedInWebSocketConnect({
             canvasWidth: canvas.width, 
             canvasHeight: canvas.height 
           });
+          
+          // Додаємо логування для перевірки canvas після оновлення
+          console.log('🎯 Canvas after image update:', {
+            canvas: canvas,
+            canvasRef: canvasRef.current,
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height,
+            canvasStyle: canvas.style,
+            canvasOnClick: canvas.onclick
+          });
         }
       };
 
@@ -676,8 +696,22 @@ export default function LinkedInWebSocketConnect({
                     height: 'auto',
                     cursor: cursorType === 'text' ? 'text' : cursorType === 'pointer' ? 'pointer' : 'crosshair'
                   }}
-                  onClick={handleCanvasClick}
-                  onDoubleClick={handleCanvasClick}
+                  onClick={(e) => {
+                    console.log('🎯 Canvas onClick triggered!', { 
+                      event: e.type, 
+                      clientX: e.clientX, 
+                      clientY: e.clientY 
+                    });
+                    handleCanvasClick(e);
+                  }}
+                  onDoubleClick={(e) => {
+                    console.log('🎯 Canvas onDoubleClick triggered!', { 
+                      event: e.type, 
+                      clientX: e.clientX, 
+                      clientY: e.clientY 
+                    });
+                    handleCanvasClick(e);
+                  }}
                   onMouseMove={handleCanvasMouseMove}
                   onWheel={handleScroll}
                 />
