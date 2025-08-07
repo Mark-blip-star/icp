@@ -257,12 +257,18 @@ export class SimpleWebsocketGateway
                 await session.page.evaluate((x, y) => {
                   const element = document.elementFromPoint(x, y);
                   if (element && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA')) {
+                    // Clear any existing value and focus
+                    (element as HTMLInputElement).value = '';
                     (element as HTMLElement).focus();
                     (element as HTMLElement).click();
-                    console.log('Input field focused and clicked');
+                    
+                    // Ensure cursor is visible
+                    (element as HTMLInputElement).setSelectionRange(0, 0);
+                    
+                    console.log('Input field focused, cleared, and cursor positioned');
                   }
                 }, event.x, event.y);
-                console.log(`[${userId}] Input field focused`);
+                console.log(`[${userId}] Input field focused and cleared`);
               }
               
               // Fallback for common LinkedIn elements
@@ -270,7 +276,7 @@ export class SimpleWebsocketGateway
                 console.log(`[${userId}] Click didn't hit target element, trying selectors...`);
                 
                 // Try to find email field
-                const emailField = await session.page.$('input[type="email"], input[name="session_key"], input[placeholder*="email"], input[placeholder*="Email"]');
+                const emailField = await session.page.$('input[type="email"], input[name="session_key"], input[placeholder*="email"], input[placeholder*="Email"], input[type="text"]');
                 if (emailField) {
                   const box = await emailField.boundingBox();
                   if (box) {
@@ -281,7 +287,15 @@ export class SimpleWebsocketGateway
                     if (Math.abs(event.x - centerX) < 150 && Math.abs(event.y - centerY) < 50) {
                       await session.page.mouse.click(centerX, centerY);
                       await emailField.focus();
-                      console.log(`[${userId}] Clicked and focused email field`);
+                      
+                      // Clear field and position cursor
+                      await session.page.evaluate((element) => {
+                        (element as HTMLInputElement).value = '';
+                        (element as HTMLElement).focus();
+                        (element as HTMLInputElement).setSelectionRange(0, 0);
+                      }, emailField);
+                      
+                      console.log(`[${userId}] Clicked, focused, and cleared email field`);
                     }
                   }
                 }
@@ -298,7 +312,15 @@ export class SimpleWebsocketGateway
                     if (Math.abs(event.x - centerX) < 150 && Math.abs(event.y - centerY) < 50) {
                       await session.page.mouse.click(centerX, centerY);
                       await passwordField.focus();
-                      console.log(`[${userId}] Clicked and focused password field`);
+                      
+                      // Clear field and position cursor
+                      await session.page.evaluate((element) => {
+                        (element as HTMLInputElement).value = '';
+                        (element as HTMLElement).focus();
+                        (element as HTMLInputElement).setSelectionRange(0, 0);
+                      }, passwordField);
+                      
+                      console.log(`[${userId}] Clicked, focused, and cleared password field`);
                     }
                   }
                 }
@@ -355,6 +377,30 @@ export class SimpleWebsocketGateway
     this.logger.log(`[${userId}] Keyboard event: ${event.type} - ${event.key}`);
     console.log(`[${userId}] Keyboard event received:`, event);
 
+    // Log current active element for debugging
+    try {
+      const session = await this.linkedInAutomationService.getSessionInfo(userId);
+      if (session && session.page && !session.page.isClosed()) {
+        const activeElementInfo = await session.page.evaluate(() => {
+          const activeElement = document.activeElement;
+          if (activeElement) {
+            return {
+              tagName: activeElement.tagName,
+              type: (activeElement as HTMLInputElement).type || '',
+              id: activeElement.id,
+              className: activeElement.className,
+              value: (activeElement as HTMLInputElement).value || '',
+              placeholder: (activeElement as HTMLInputElement).placeholder || ''
+            };
+          }
+          return null;
+        });
+        console.log(`[${userId}] Current active element:`, activeElementInfo);
+      }
+    } catch (error) {
+      console.log(`[${userId}] Could not get active element info:`, error.message);
+    }
+
     try {
       const session = await this.linkedInAutomationService.getSessionInfo(userId);
       
@@ -375,6 +421,22 @@ export class SimpleWebsocketGateway
             await session.page.keyboard.type(event.key);
             console.log(`[${userId}] Key typed directly: ${event.key}`);
           }
+          
+          // Ensure the focused element is visible and cursor is positioned
+          await session.page.evaluate(() => {
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+              // Scroll element into view if needed
+              activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              
+              // Ensure cursor is at the end of the text
+              const input = activeElement as HTMLInputElement;
+              const length = input.value.length;
+              input.setSelectionRange(length, length);
+              
+              console.log('Active element scrolled into view and cursor positioned');
+            }
+          });
         } catch (keyboardError) {
           console.error(`[${userId}] Keyboard action failed:`, keyboardError);
           if (keyboardError.message.includes('Session closed') || keyboardError.message.includes('page has been closed')) {
