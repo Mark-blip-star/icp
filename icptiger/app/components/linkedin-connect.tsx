@@ -1,8 +1,8 @@
 // file: app/components/linkedin-connect.tsx
 
 import React from "react";
-import { LinkedInUniversal } from "./linkedin-universal";
+import { LinkedInConnectWithWebSocket } from "./linkedin-connect-with-websocket";
 
 export function LinkedInConnect() {
-  return <LinkedInUniversal />;
+  return <LinkedInConnectWithWebSocket />;
 }
