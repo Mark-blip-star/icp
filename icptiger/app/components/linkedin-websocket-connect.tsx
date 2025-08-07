@@ -467,11 +467,15 @@ export default function LinkedInWebSocketConnect({
               <div className="border rounded-lg overflow-hidden bg-black relative">
                 <canvas
                   ref={canvasRef}
-                  className="w-full max-h-[70vh] object-contain cursor-crosshair"
+                  className="w-full h-auto max-h-[70vh] object-contain cursor-crosshair"
                   onClick={handleCanvasClick}
                   onDoubleClick={handleCanvasClick}
                   onWheel={handleScroll}
-                  style={{ imageRendering: 'pixelated' }}
+                  style={{ 
+                    imageRendering: 'pixelated',
+                    maxWidth: '100%',
+                    height: 'auto'
+                  }}
                 />
                 <img
                   ref={imageRef}
@@ -490,51 +494,28 @@ export default function LinkedInWebSocketConnect({
                   tabIndex={-1}
                 />
                 
-                {/* Input overlay for real-time text display */}
+                {/* Hidden input overlay - only for debugging */}
                 {inputOverlay.position && (inputOverlay.email || inputOverlay.password) && canvasRef.current && (
-                  <div className="absolute inset-0">
-                    {/* Dynamic overlay positioned exactly over the real field */}
-                    <div 
-                      className="absolute bg-white text-black px-2 py-1 rounded border-2 border-blue-500 font-mono text-sm shadow-lg z-10 cursor-text"
-                      style={{
-                        left: `${(inputOverlay.position.x / canvasRef.current.width) * 100}%`,
-                        top: `${(inputOverlay.position.y / canvasRef.current.height) * 100}%`,
-                        width: `${(inputOverlay.position.width / canvasRef.current.width) * 100}%`,
-                        height: `${(inputOverlay.position.height / canvasRef.current.height) * 100}%`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-start',
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        borderColor: inputOverlay.activeField ? '#3b82f6' : '#e5e7eb'
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Simulate click on the real field
-                        if (canvasRef.current) {
-                          const canvas = canvasRef.current;
-                          const rect = canvas.getBoundingClientRect();
-                          const x = inputOverlay.position!.x + rect.left;
-                          const y = inputOverlay.position!.y + rect.top;
-                          
-                          // Create and dispatch mouse event
-                          const clickEvent = new MouseEvent('click', {
-                            clientX: x,
-                            clientY: y,
-                            bubbles: true,
-                            cancelable: true
-                          });
-                          canvas.dispatchEvent(clickEvent);
-                        }
-                      }}
-                    >
-                      <span className="truncate">
-                        {inputOverlay.activeField === 'email' ? inputOverlay.email : 
-                         inputOverlay.activeField === 'password' ? '•'.repeat(inputOverlay.password.length) : ''}
-                        {inputOverlay.activeField && (
-                          <span className="inline-block w-0.5 h-4 bg-black ml-1 animate-pulse"></span>
-                        )}
-                      </span>
-                    </div>
+                  <div className="absolute inset-0 pointer-events-none">
+                    {/* Debug overlay - only visible in development */}
+                    {process.env.NODE_ENV === 'development' && (
+                      <div 
+                        className="absolute bg-transparent border border-red-500 font-mono text-xs z-10"
+                        style={{
+                          left: `${(inputOverlay.position.x / canvasRef.current.width) * 100}%`,
+                          top: `${(inputOverlay.position.y / canvasRef.current.height) * 100}%`,
+                          width: `${(inputOverlay.position.width / canvasRef.current.width) * 100}%`,
+                          height: `${(inputOverlay.position.height / canvasRef.current.height) * 100}%`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-start',
+                          color: 'red',
+                          fontSize: '10px'
+                        }}
+                      >
+                        DEBUG: {inputOverlay.email || inputOverlay.password}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

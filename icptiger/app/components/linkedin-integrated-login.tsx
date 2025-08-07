@@ -130,9 +130,9 @@ export function LinkedInIntegratedLogin({
   // Show WebSocket mode
   if (showWebSocketMode) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2">
-        <div className="bg-white rounded-2xl w-full h-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-gray-200 flex-shrink-0">
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-1">
+          <div className="bg-white rounded-2xl w-full h-full max-w-[98vw] max-h-[98vh] overflow-hidden flex flex-col">
+            <div className="p-3 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">
@@ -163,7 +163,7 @@ export function LinkedInIntegratedLogin({
             </div>
           </div>
           
-          <div className="flex-1 overflow-auto p-4">
+                      <div className="flex-1 overflow-auto p-2">
             <LinkedInWebSocketConnect
               userId={userId}
               onSuccess={handleWebSocketSuccess}
