@@ -455,9 +455,9 @@ export default function LinkedInWebSocketConnect({
                     {/* Email field overlay */}
                     {inputOverlay.email && (
                       <div 
-                        className="absolute bg-white text-black px-3 py-2 rounded border-2 border-blue-500 font-mono text-sm"
+                        className="absolute bg-white text-black px-3 py-2 rounded border-2 border-blue-500 font-mono text-sm shadow-lg z-10"
                         style={{
-                          top: '35%',
+                          top: '25%',
                           left: '50%',
                           transform: 'translateX(-50%)',
                           minWidth: '300px',
@@ -465,7 +465,9 @@ export default function LinkedInWebSocketConnect({
                         }}
                       >
                         <div className="flex items-center">
-                          <span className="text-gray-500 mr-2">📧</span>
+                          <span className={`mr-2 ${inputOverlay.activeField === 'email' ? 'text-blue-600' : 'text-gray-500'}`}>
+                            📧 Email: {inputOverlay.activeField === 'email' && '✓'}
+                          </span>
                           <span className="flex-1">
                             {inputOverlay.email}
                             {inputOverlay.activeField === 'email' && (
@@ -479,9 +481,9 @@ export default function LinkedInWebSocketConnect({
                     {/* Password field overlay */}
                     {inputOverlay.password && (
                       <div 
-                        className="absolute bg-white text-black px-3 py-2 rounded border-2 border-blue-500 font-mono text-sm"
+                        className="absolute bg-white text-black px-3 py-2 rounded border-2 border-blue-500 font-mono text-sm shadow-lg z-10"
                         style={{
-                          top: '45%',
+                          top: '35%',
                           left: '50%',
                           transform: 'translateX(-50%)',
                           minWidth: '300px',
@@ -489,7 +491,9 @@ export default function LinkedInWebSocketConnect({
                         }}
                       >
                         <div className="flex items-center">
-                          <span className="text-gray-500 mr-2">🔒</span>
+                          <span className={`mr-2 ${inputOverlay.activeField === 'password' ? 'text-blue-600' : 'text-gray-500'}`}>
+                            🔒 Password: {inputOverlay.activeField === 'password' && '✓'}
+                          </span>
                           <span className="flex-1">
                             {'•'.repeat(inputOverlay.password.length)}
                             {inputOverlay.activeField === 'password' && (
