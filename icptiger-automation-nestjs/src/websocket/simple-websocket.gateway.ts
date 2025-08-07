@@ -542,13 +542,17 @@ export class SimpleWebsocketGateway
               element: updatedElementInfo,
               timestamp: Date.now()
             };
+            console.log(`[${userId}] About to emit inputUpdated event...`);
             client.emit('inputUpdated', updateData);
-            console.log(`[${userId}] Sent input update to frontend:`, JSON.stringify(updateData, null, 2));
+            console.log(`[${userId}] ✅ SUCCESS: Sent input update to frontend:`, JSON.stringify(updateData, null, 2));
           } else {
-            console.log(`[${userId}] No element info to send to frontend`);
+            console.log(`[${userId}] ❌ No element info to send to frontend`);
           }
         } catch (keyboardError) {
-          console.error(`[${userId}] Keyboard action failed:`, keyboardError);
+          console.error(`[${userId}] ❌ Keyboard action failed:`, keyboardError);
+          console.error(`[${userId}] Error details:`, keyboardError.message);
+          console.error(`[${userId}] Error stack:`, keyboardError.stack);
+          
           if (keyboardError.message.includes('Session closed') || keyboardError.message.includes('page has been closed')) {
             console.log(`[${userId}] Page was closed during keyboard event, attempting to recreate session...`);
             await this.recreateSession(userId, client);
