@@ -63,6 +63,7 @@ export default function LinkedInWebSocketConnect({
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const hiddenInputRef = useRef<HTMLInputElement>(null);
 
   const addDebugInfo = (info: string) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -402,6 +403,12 @@ export default function LinkedInWebSocketConnect({
     if (!socket || !canvasRef.current) {
       console.log('❌ Early return - socket or canvas not available');
       return;
+    }
+    
+    // Фокусуємо input для клавіатури при кліку на canvas
+    if (hiddenInputRef.current) {
+      hiddenInputRef.current.focus();
+      console.log('🎯 Input focused for keyboard events');
     }
 
     const canvas = canvasRef.current;
@@ -761,13 +768,18 @@ export default function LinkedInWebSocketConnect({
                 
                 {/* Hidden input for keyboard events */}
                 <input
+                  ref={hiddenInputRef}
                   type="text"
-                  className="absolute inset-0 opacity-0 pointer-events-none"
+                  className="absolute inset-0 opacity-0"
                   onKeyDown={handleKeyPress}
                   onFocus={() => addDebugInfo('Input focused - keyboard active')}
                   onBlur={() => addDebugInfo('Input blurred')}
                   autoFocus
                   tabIndex={-1}
+                  style={{ 
+                    pointerEvents: 'none',
+                    zIndex: -1
+                  }}
                 />
                 
                 {/* Hidden input overlay - only for debugging */}
