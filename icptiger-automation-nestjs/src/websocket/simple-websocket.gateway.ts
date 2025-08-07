@@ -477,12 +477,23 @@ export class SimpleWebsocketGateway
               // Scroll element into view if needed
               activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
               
-              // Ensure cursor is at the end of the text
+              // Ensure cursor is at the end of the text (only for supported input types)
               const input = activeElement as HTMLInputElement;
               const length = input.value.length;
-              input.setSelectionRange(length, length);
               
-              console.log('Browser: Active element scrolled into view and cursor positioned');
+              try {
+                // Only set selection range for text inputs, not email/password
+                if (input.type === 'text' || input.type === 'textarea' || input.type === '') {
+                  input.setSelectionRange(length, length);
+                  console.log('Browser: Cursor positioned at end');
+                } else {
+                  console.log('Browser: Skipping setSelectionRange for type:', input.type);
+                }
+              } catch (error) {
+                console.log('Browser: Error setting selection range:', error.message);
+              }
+              
+              console.log('Browser: Active element scrolled into view');
               console.log('Browser: Input value:', input.value);
               console.log('Browser: Input type:', input.type);
               console.log('Browser: Input placeholder:', input.placeholder);
@@ -774,7 +785,7 @@ export class SimpleWebsocketGateway
             className: activeElement.className,
             value: input.value || '',
             placeholder: input.placeholder || '',
-            cursorPosition: input.selectionStart || 0
+            cursorPosition: input.value.length // Use value length instead of selectionStart
           };
           console.log('sendInputUpdate: Element info:', info);
           return info;
