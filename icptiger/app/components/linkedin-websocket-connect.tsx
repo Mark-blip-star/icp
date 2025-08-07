@@ -170,6 +170,7 @@ export default function LinkedInWebSocketConnect({
           
           if (isEmailField) {
             console.log('Frontend: Updating email field with value:', data.element.value);
+            console.log('Frontend: Position data:', data.element.position);
             setInputOverlay(prev => {
               const newState = {
                 ...prev,
@@ -460,16 +461,16 @@ export default function LinkedInWebSocketConnect({
                 />
                 
                 {/* Input overlay for real-time text display */}
-                {inputOverlay.position && (inputOverlay.email || inputOverlay.password) && (
+                {inputOverlay.position && (inputOverlay.email || inputOverlay.password) && canvasRef.current && (
                   <div className="absolute inset-0">
                     {/* Dynamic overlay positioned exactly over the real field */}
                     <div 
                       className="absolute bg-white text-black px-2 py-1 rounded border-2 border-blue-500 font-mono text-sm shadow-lg z-10 cursor-text"
                       style={{
-                        left: `${inputOverlay.position.x}px`,
-                        top: `${inputOverlay.position.y}px`,
-                        width: `${inputOverlay.position.width}px`,
-                        height: `${inputOverlay.position.height}px`,
+                        left: `${(inputOverlay.position.x / canvasRef.current.width) * 100}%`,
+                        top: `${(inputOverlay.position.y / canvasRef.current.height) * 100}%`,
+                        width: `${(inputOverlay.position.width / canvasRef.current.width) * 100}%`,
+                        height: `${(inputOverlay.position.height / canvasRef.current.height) * 100}%`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'flex-start',

@@ -497,6 +497,9 @@ export class SimpleWebsocketGateway
             await new Promise(resolve => setTimeout(resolve, 50));
           }
           
+          // Send input update after keyboard event
+          await this.sendInputUpdate(userId, client, session.page);
+          
           // Ensure the focused element is visible and cursor is positioned, then send update
           console.log(`[${userId}] Getting updated element info after keyboard event...`);
           const updatedElementInfo = await session.page.evaluate(() => {
@@ -545,18 +548,8 @@ export class SimpleWebsocketGateway
           
           console.log(`[${userId}] Updated element info:`, updatedElementInfo);
           
-          // Send updated element state to frontend
-          if (updatedElementInfo) {
-            const updateData = {
-              element: updatedElementInfo,
-              timestamp: Date.now()
-            };
-            console.log(`[${userId}] About to emit inputUpdated event...`);
-            client.emit('inputUpdated', updateData);
-            console.log(`[${userId}] ✅ SUCCESS: Sent input update to frontend:`, JSON.stringify(updateData, null, 2));
-          } else {
-            console.log(`[${userId}] ❌ No element info to send to frontend`);
-          }
+          // Use sendInputUpdate to get proper position data
+          await this.sendInputUpdate(userId, client, session.page);
         } catch (keyboardError) {
           console.error(`[${userId}] ❌ Keyboard action failed:`, keyboardError);
           console.error(`[${userId}] Error details:`, keyboardError.message);
