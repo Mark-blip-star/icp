@@ -136,6 +136,9 @@ export class SimpleWebsocketGateway
           
           await this.startCDPScreencast(userId, client);
           
+          // Send initial screenshot for existing session
+          await this.forceScreenshotUpdate(userId, client, session.page);
+          
           client.emit('loginStarted', {
             message: 'LinkedIn login session started',
             url: session.page.url(),
@@ -156,6 +159,9 @@ export class SimpleWebsocketGateway
             });
             
             await this.startCDPScreencast(userId, client);
+            
+            // Send initial screenshot for new session
+            await this.forceScreenshotUpdate(userId, client, page);
             
             client.emit('loginStarted', {
               message: 'LinkedIn login session started',
@@ -935,6 +941,12 @@ export class SimpleWebsocketGateway
     try {
       console.log(`[${userId}] Forcing screenshot update...`);
       
+      // Check if page is still valid
+      if (!page || page.isClosed()) {
+        console.error(`[${userId}] Page is closed or invalid`);
+        return;
+      }
+      
       // Take a manual screenshot and send it
       const screenshot = await page.screenshot({
         type: 'jpeg',
@@ -946,6 +958,7 @@ export class SimpleWebsocketGateway
       const dataUrl = `data:image/jpeg;base64,${base64Image}`;
       
       console.log(`[${userId}] Screenshot taken, size: ${base64Image.length} chars`);
+      console.log(`[${userId}] Data URL starts with: ${dataUrl.substring(0, 50)}...`);
       
       client.emit('screencast', {
         data: dataUrl,
