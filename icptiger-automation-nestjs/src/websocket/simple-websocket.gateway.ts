@@ -414,6 +414,7 @@ export class SimpleWebsocketGateway
 
     this.logger.log(`[${userId}] Keyboard event: ${event.type} - ${event.key}`);
     console.log(`[${userId}] Keyboard event received:`, event);
+    console.log(`[${userId}] Event details:`, JSON.stringify(event, null, 2));
 
     // Log current active element for debugging
     try {
@@ -466,10 +467,7 @@ export class SimpleWebsocketGateway
             await new Promise(resolve => setTimeout(resolve, 50));
           }
           
-          // Always send update after any keyboard event
-          await this.sendInputUpdate(userId, client, session.page);
-          
-          // Ensure the focused element is visible and cursor is positioned
+          // Ensure the focused element is visible and cursor is positioned, then send update
           const updatedElementInfo = await session.page.evaluate(() => {
             const activeElement = document.activeElement;
             if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
@@ -773,6 +771,13 @@ export class SimpleWebsocketGateway
           timestamp: Date.now()
         });
         console.log(`[${userId}] Sent input update:`, activeElementInfo);
+      } else {
+        // If no active element, send empty update to clear overlay
+        client.emit('inputUpdated', {
+          element: null,
+          timestamp: Date.now()
+        });
+        console.log(`[${userId}] Sent empty input update to clear overlay`);
       }
     } catch (error) {
       console.log(`[${userId}] Error sending input update:`, error.message);
