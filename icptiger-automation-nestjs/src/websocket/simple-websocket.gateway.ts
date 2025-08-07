@@ -852,28 +852,67 @@ export class SimpleWebsocketGateway
         let selector = '';
         switch (fieldType) {
           case 'email':
-            selector = 'input[type="email"], input[name="session_key"], #username';
+            selector = 'input[type="email"], input[name="session_key"], #username, input[autocomplete="username"]';
             break;
           case 'password':
-            selector = 'input[type="password"], input[name="session_password"], #password';
+            selector = 'input[type="password"], input[name="session_password"], #password, input[autocomplete="current-password"]';
+            break;
+          case 'signin':
+            selector = 'button[type="submit"], input[type="submit"], .sign-in-form__submit-button, button:contains("Sign in"), button:contains("Sign In")';
             break;
           default:
             selector = fieldType;
         }
 
-        // Try to click by selector first
+        // Try multiple methods to click the field
+        let clicked = false;
+        
+        // Method 1: Try by selector
         try {
           await session.page.waitForSelector(selector, { timeout: 2000 });
           await session.page.click(selector);
           this.logger.log(`[${userId}] ✅ Clicked field by selector: ${selector}`);
+          clicked = true;
         } catch (selectorError) {
-          // If selector fails, try clicking by coordinates
-          if (x !== undefined && y !== undefined) {
+          this.logger.warn(`[${userId}] Selector click failed: ${selectorError.message}`);
+        }
+        
+        // Method 2: Try by coordinates if selector failed
+        if (!clicked && x !== undefined && y !== undefined) {
+          try {
             await session.page.mouse.click(x, y);
             this.logger.log(`[${userId}] ✅ Clicked field by coordinates: ${x}, ${y}`);
-          } else {
-            throw selectorError;
+            clicked = true;
+          } catch (coordError) {
+            this.logger.warn(`[${userId}] Coordinate click failed: ${coordError.message}`);
           }
+        }
+        
+        // Method 3: Try to find element by text content for buttons
+        if (!clicked && fieldType === 'signin') {
+          try {
+            const buttonText = await session.page.evaluate(() => {
+              const buttons = Array.from(document.querySelectorAll('button'));
+              const signInButton = buttons.find(btn => 
+                btn.textContent?.toLowerCase().includes('sign in') ||
+                btn.textContent?.toLowerCase().includes('signin') ||
+                btn.textContent?.toLowerCase().includes('log in')
+              );
+              return signInButton ? signInButton.textContent : null;
+            });
+            
+            if (buttonText) {
+              await session.page.click(`button:has-text("${buttonText}")`);
+              this.logger.log(`[${userId}] ✅ Clicked sign in button by text: ${buttonText}`);
+              clicked = true;
+            }
+          } catch (textError) {
+            this.logger.warn(`[${userId}] Text-based click failed: ${textError.message}`);
+          }
+        }
+        
+        if (!clicked) {
+          throw new Error(`Failed to click ${fieldType} field using all methods`);
         }
 
         // Force screenshot update after click

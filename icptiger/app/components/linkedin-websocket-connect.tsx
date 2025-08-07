@@ -280,6 +280,7 @@ export default function LinkedInWebSocketConnect({
         
         if (data.success) {
           addDebugInfo(`Field clicked successfully: ${data.fieldType}`);
+          console.log('Frontend: Field click successful:', data.fieldType, 'using selector:', data.selector);
           
           // Update active field based on the clicked field
           if (data.fieldType === 'email') {
@@ -293,6 +294,13 @@ export default function LinkedInWebSocketConnect({
               ...prev,
               activeField: 'password',
               cursorPosition: prev.password.length
+            }));
+          } else if (data.fieldType === 'signin') {
+            // Clear active field when clicking sign in button
+            setInputOverlay(prev => ({
+              ...prev,
+              activeField: null,
+              cursorPosition: 0
             }));
           }
         } else {
@@ -350,14 +358,18 @@ export default function LinkedInWebSocketConnect({
     // Determine cursor type based on position
     const emailFieldArea = { x: 448, y: 264, width: 304, height: 52 };
     const passwordFieldArea = { x: 448, y: 316, width: 304, height: 52 };
+    const signInButtonArea = { x: 448, y: 400, width: 304, height: 48 };
 
     if ((scaledX >= emailFieldArea.x && scaledX <= emailFieldArea.x + emailFieldArea.width &&
          scaledY >= emailFieldArea.y && scaledY <= emailFieldArea.y + emailFieldArea.height) ||
         (scaledX >= passwordFieldArea.x && scaledX <= passwordFieldArea.x + passwordFieldArea.width &&
          scaledY >= passwordFieldArea.y && scaledY <= passwordFieldArea.y + passwordFieldArea.height)) {
       setCursorType('text');
-    } else {
+    } else if (scaledX >= signInButtonArea.x && scaledX <= signInButtonArea.x + signInButtonArea.width &&
+               scaledY >= signInButtonArea.y && scaledY <= signInButtonArea.y + signInButtonArea.height) {
       setCursorType('pointer');
+    } else {
+      setCursorType('default');
     }
   };
 
@@ -379,9 +391,10 @@ export default function LinkedInWebSocketConnect({
 
     addDebugInfo(`Mouse click at display (${Math.round(x)}, ${Math.round(y)}) -> page (${Math.round(pageX)}, ${Math.round(pageY)})`);
     
-    // Check if click is on email or password field areas (approximate LinkedIn positions)
+    // Check if click is on email, password, or sign in button areas (approximate LinkedIn positions)
     const emailFieldArea = { x: 448, y: 264, width: 304, height: 52 };
     const passwordFieldArea = { x: 448, y: 316, width: 304, height: 52 };
+    const signInButtonArea = { x: 448, y: 400, width: 304, height: 48 }; // Approximate sign in button area
 
     if (pageX >= emailFieldArea.x && pageX <= emailFieldArea.x + emailFieldArea.width &&
         pageY >= emailFieldArea.y && pageY <= emailFieldArea.y + emailFieldArea.height) {
@@ -417,6 +430,16 @@ export default function LinkedInWebSocketConnect({
         activeField: 'password',
         cursorPosition: prev.password.length
       }));
+    } else if (pageX >= signInButtonArea.x && pageX <= signInButtonArea.x + signInButtonArea.width &&
+               pageY >= signInButtonArea.y && pageY <= signInButtonArea.y + signInButtonArea.height) {
+      // Click on sign in button
+      console.log('Clicking sign in button');
+      addDebugInfo('Clicking sign in button');
+      socket.emit('clickField', {
+        fieldType: 'signin',
+        x: pageX,
+        y: pageY
+      });
     } else {
       // Regular mouse click
       socket.emit('mouse', {
