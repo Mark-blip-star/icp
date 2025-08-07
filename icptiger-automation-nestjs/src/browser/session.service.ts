@@ -53,36 +53,8 @@ export class SessionService {
         timeout: 60000,
       });
 
-      // Wait for page to load and ensure all elements are visible
+      // Wait for page to load naturally
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Scroll to make sure all elements are visible
-      await page.evaluate(() => {
-        window.scrollTo(0, 0);
-        
-        // Find and scroll to the sign in button if it exists
-        const signInButton = document.querySelector('button[type="submit"], input[type="submit"], .sign-in-button, [data-test-id="sign-in-button"]');
-        if (signInButton) {
-          signInButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        
-        // Also scroll to password field to ensure it's visible
-        const passwordField = document.querySelector('input[type="password"], input[name="session_password"]');
-        if (passwordField) {
-          passwordField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        
-        // Check if page content is too tall and adjust zoom if needed
-        const bodyHeight = document.body.scrollHeight;
-        const viewportHeight = window.innerHeight;
-        
-        if (bodyHeight > viewportHeight * 1.2) {
-          // If content is 20% taller than viewport, zoom out slightly
-          document.body.style.zoom = '0.9';
-          document.body.style.transform = 'scale(0.9)';
-          document.body.style.transformOrigin = 'top left';
-        }
-      });
 
       const sessionId = `${userId}_${Date.now()}`;
       const sessionInfo: BrowserSessionInfo = {

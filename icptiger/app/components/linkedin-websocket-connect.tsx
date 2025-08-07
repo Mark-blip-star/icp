@@ -331,9 +331,10 @@ export default function LinkedInWebSocketConnect({
 
       img.onload = () => {
         if (ctx) {
-          canvas.width = 1280;
-          canvas.height = 720;
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          // Set canvas size to match the natural image size
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          ctx.drawImage(img, 0, 0);
         }
       };
 
@@ -434,8 +435,6 @@ export default function LinkedInWebSocketConnect({
               <div className="border rounded-lg overflow-hidden bg-black relative">
                 <canvas
                   ref={canvasRef}
-                  width={1920}
-                  height={1400}
                   className="w-full max-h-[70vh] object-contain cursor-crosshair"
                   onClick={handleCanvasClick}
                   onWheel={handleScroll}

@@ -41,10 +41,7 @@ export class PuppeteerService implements OnModuleInit {
           '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding',
         ],
-        defaultViewport: {
-          width: config.defaultViewport?.width ?? 1920,
-          height: config.defaultViewport?.height ?? 1400,
-        },
+        defaultViewport: null, // Let browser use default size
       };
 
       this.browser = await puppeteer.launch(browserOptions);
@@ -67,10 +64,10 @@ export class PuppeteerService implements OnModuleInit {
 
       const page = await targetBrowser.newPage();
       
-      // Set larger viewport for better user experience
+      // Let page use its natural size
       await page.setViewport({
-        width: 1920,
-        height: 1400,
+        width: 0,
+        height: 0,
         deviceScaleFactor: 1,
       });
       
