@@ -54,6 +54,7 @@ export default function LinkedInWebSocketConnect({
 
   const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
   const [cursorType, setCursorType] = useState<'default' | 'pointer' | 'text'>('default');
+  const [lastClickPosition, setLastClickPosition] = useState<{ x: number; y: number } | null>(null);
 
   // Log overlay state changes
   useEffect(() => {
@@ -389,7 +390,22 @@ export default function LinkedInWebSocketConnect({
     const pageX = x * scaleX;
     const pageY = y * scaleY;
 
-    addDebugInfo(`Mouse click at display (${Math.round(x)}, ${Math.round(y)}) -> page (${Math.round(pageX)}, ${Math.round(pageY)})`);
+    // Store last click position for debugging
+    setLastClickPosition({ x: pageX, y: pageY });
+
+    console.log('🎯 UI Click detected:', {
+      display: { x: Math.round(x), y: Math.round(y) },
+      page: { x: Math.round(pageX), y: Math.round(pageY) },
+      canvas: { width: canvas.width, height: canvas.height },
+      rect: { width: rect.width, height: rect.height }
+    });
+
+    addDebugInfo(`🎯 UI Click: display (${Math.round(x)}, ${Math.round(y)}) -> page (${Math.round(pageX)}, ${Math.round(pageY)})`);
+
+    // Clear click indicator after 3 seconds
+    setTimeout(() => {
+      setLastClickPosition(null);
+    }, 3000);
     
     // Check if click is on email, password, or sign in button areas (approximate LinkedIn positions)
     const emailFieldArea = { x: 448, y: 264, width: 304, height: 52 };
@@ -662,6 +678,25 @@ export default function LinkedInWebSocketConnect({
                     )}
                   </div>
                 )}
+
+                {/* Last click indicator */}
+                {lastClickPosition && (
+                  <div 
+                    className="absolute pointer-events-none z-30"
+                    style={{
+                      left: `${(lastClickPosition.x / (canvasRef.current?.width || 1)) * 100}%`,
+                      top: `${(lastClickPosition.y / (canvasRef.current?.height || 1)) * 100}%`,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  >
+                    <div className="w-8 h-8 bg-red-500 rounded-full opacity-90 flex items-center justify-center animate-ping">
+                      <div className="w-3 h-3 bg-white rounded-full"></div>
+                    </div>
+                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                      Click: {Math.round(lastClickPosition.x)}, {Math.round(lastClickPosition.y)}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Hidden input for keyboard events */}
                 <input
@@ -719,6 +754,25 @@ export default function LinkedInWebSocketConnect({
                     {info}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Click Information */}
+          {lastClickPosition && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Click Tracking</h4>
+              <div className="bg-blue-50 p-2 rounded-md text-xs">
+                <div className="font-semibold text-blue-800">Last Click Position:</div>
+                <div className="text-blue-600">
+                  Page: ({Math.round(lastClickPosition.x)}, {Math.round(lastClickPosition.y)})
+                </div>
+                <div className="text-blue-600">
+                  Canvas: {canvasRef.current?.width || 0} x {canvasRef.current?.height || 0}
+                </div>
+                <div className="text-blue-600">
+                  Scale: {canvasRef.current ? (canvasRef.current.width / canvasRef.current.getBoundingClientRect().width).toFixed(2) : 'N/A'}
+                </div>
               </div>
             </div>
           )}
