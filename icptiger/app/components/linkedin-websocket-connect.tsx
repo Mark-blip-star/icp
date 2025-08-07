@@ -208,6 +208,21 @@ export default function LinkedInWebSocketConnect({
     });
   };
 
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!socket) return;
+    
+    const value = event.target.value;
+    if (value.length > 0) {
+      const lastChar = value[value.length - 1];
+      addDebugInfo(`Input: ${lastChar}`);
+      
+      socket.emit('keyboard', {
+        type: 'type',
+        key: lastChar,
+      });
+    }
+  };
+
   const handleScroll = (event: React.WheelEvent) => {
     if (!socket) return;
 
@@ -328,22 +343,31 @@ export default function LinkedInWebSocketConnect({
                 Scroll to navigate
               </div>
               
-              <div className="border rounded-lg overflow-hidden bg-black">
+              <div className="border rounded-lg overflow-hidden bg-black relative">
                 <canvas
                   ref={canvasRef}
                   width={1280}
                   height={720}
                   className="w-full h-auto cursor-crosshair"
                   onClick={handleCanvasClick}
-                  onKeyDown={handleKeyPress}
                   onWheel={handleScroll}
-                  tabIndex={0}
                   style={{ imageRendering: 'pixelated' }}
                 />
                 <img
                   ref={imageRef}
                   style={{ display: 'none' }}
                   alt="Screencast"
+                />
+                
+                {/* Hidden input for keyboard events */}
+                <input
+                  type="text"
+                  className="absolute inset-0 opacity-0 cursor-crosshair"
+                  onKeyDown={handleKeyPress}
+                  onFocus={() => addDebugInfo('Input focused - keyboard active')}
+                  onBlur={() => addDebugInfo('Input blurred')}
+                  autoFocus
+                  tabIndex={-1}
                 />
               </div>
               

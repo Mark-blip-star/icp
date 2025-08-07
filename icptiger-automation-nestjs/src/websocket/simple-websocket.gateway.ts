@@ -233,17 +233,61 @@ export class SimpleWebsocketGateway
             await session.page.mouse.click(event.x, event.y);
             console.log(`[${userId}] Mouse clicked at (${event.x}, ${event.y})`);
             
-            // Try to find and click on form elements if click didn't hit target
+            // Check what element was clicked and focus if it's an input
             try {
-              const elementAtPoint = await session.page.evaluate((x, y) => {
+              const elementInfo = await session.page.evaluate((x, y) => {
                 const element = document.elementFromPoint(x, y);
-                return element ? element.tagName : null;
+                if (element) {
+                  return {
+                    tagName: element.tagName,
+                    type: (element as HTMLInputElement).type || '',
+                    id: element.id,
+                    className: element.className,
+                    isInput: element.tagName === 'INPUT' || element.tagName === 'TEXTAREA',
+                    isButton: element.tagName === 'BUTTON'
+                  };
+                }
+                return null;
               }, event.x, event.y);
               
-              if (elementAtPoint !== 'INPUT' && elementAtPoint !== 'BUTTON') {
+              console.log(`[${userId}] Clicked element:`, elementInfo);
+              
+              // If clicked on input field, ensure it's focused
+              if (elementInfo && elementInfo.isInput) {
+                await session.page.evaluate((x, y) => {
+                  const element = document.elementFromPoint(x, y);
+                  if (element && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA')) {
+                    (element as HTMLElement).focus();
+                    (element as HTMLElement).click();
+                    console.log('Input field focused and clicked');
+                  }
+                }, event.x, event.y);
+                console.log(`[${userId}] Input field focused`);
+              }
+              
+              // Fallback for common LinkedIn elements
+              if (!elementInfo || (!elementInfo.isInput && !elementInfo.isButton)) {
                 console.log(`[${userId}] Click didn't hit target element, trying selectors...`);
                 
-                const passwordField = await session.page.$('input[type="password"]');
+                // Try to find email field
+                const emailField = await session.page.$('input[type="email"], input[name="session_key"], input[placeholder*="email"], input[placeholder*="Email"]');
+                if (emailField) {
+                  const box = await emailField.boundingBox();
+                  if (box) {
+                    const centerX = box.x + box.width / 2;
+                    const centerY = box.y + box.height / 2;
+                    console.log(`[${userId}] Found email field at (${centerX}, ${centerY})`);
+                    
+                    if (Math.abs(event.x - centerX) < 150 && Math.abs(event.y - centerY) < 50) {
+                      await session.page.mouse.click(centerX, centerY);
+                      await emailField.focus();
+                      console.log(`[${userId}] Clicked and focused email field`);
+                    }
+                  }
+                }
+                
+                // Try to find password field
+                const passwordField = await session.page.$('input[type="password"], input[name="session_password"]');
                 if (passwordField) {
                   const box = await passwordField.boundingBox();
                   if (box) {
@@ -251,14 +295,16 @@ export class SimpleWebsocketGateway
                     const centerY = box.y + box.height / 2;
                     console.log(`[${userId}] Found password field at (${centerX}, ${centerY})`);
                     
-                    if (Math.abs(event.x - centerX) < 100 && Math.abs(event.y - centerY) < 50) {
+                    if (Math.abs(event.x - centerX) < 150 && Math.abs(event.y - centerY) < 50) {
                       await session.page.mouse.click(centerX, centerY);
-                      console.log(`[${userId}] Clicked on password field center`);
+                      await passwordField.focus();
+                      console.log(`[${userId}] Clicked and focused password field`);
                     }
                   }
                 }
                 
-                const signInButton = await session.page.$('button[type="submit"]');
+                // Try to find sign in button
+                const signInButton = await session.page.$('button[type="submit"], button:contains("Sign in"), button:contains("Log in")');
                 if (signInButton) {
                   const box = await signInButton.boundingBox();
                   if (box) {
@@ -266,9 +312,9 @@ export class SimpleWebsocketGateway
                     const centerY = box.y + box.height / 2;
                     console.log(`[${userId}] Found sign in button at (${centerX}, ${centerY})`);
                     
-                    if (Math.abs(event.x - centerX) < 100 && Math.abs(event.y - centerY) < 50) {
+                    if (Math.abs(event.x - centerX) < 150 && Math.abs(event.y - centerY) < 50) {
                       await session.page.mouse.click(centerX, centerY);
-                      console.log(`[${userId}] Clicked on sign in button center`);
+                      console.log(`[${userId}] Clicked on sign in button`);
                     }
                   }
                 }
@@ -314,7 +360,7 @@ export class SimpleWebsocketGateway
       
       if (session && session.page && !session.page.isClosed()) {
         try {
-          // Фронтенд отправляет type: "press", key: "a"
+          // Handle both "press" and "type" events
           if (event.type === "press") {
             // Для обычных символов используем type, для специальных клавиш - press
             if (event.key.length === 1) {
@@ -324,6 +370,10 @@ export class SimpleWebsocketGateway
               await session.page.keyboard.press(event.key);
               console.log(`[${userId}] Key pressed: ${event.key}`);
             }
+          } else if (event.type === "type") {
+            // Direct typing for input fields
+            await session.page.keyboard.type(event.key);
+            console.log(`[${userId}] Key typed directly: ${event.key}`);
           }
         } catch (keyboardError) {
           console.error(`[${userId}] Keyboard action failed:`, keyboardError);
