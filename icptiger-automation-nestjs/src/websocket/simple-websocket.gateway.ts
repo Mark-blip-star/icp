@@ -792,7 +792,8 @@ export class SimpleWebsocketGateway
       
       await cdpSession.send('Page.startScreencast', {
         format: 'jpeg',
-        quality: 80
+        quality: 80,
+        everyNthFrame: 1  // Send every frame for real-time updates
         // Remove maxWidth and maxHeight to use natural size
       });
 
@@ -800,7 +801,15 @@ export class SimpleWebsocketGateway
 
       cdpSession.on('Page.screencastFrame', async (data) => {
         try {
-          client.emit('screencast', data.data);
+          const base64Image = data.data;
+          const dataUrl = `data:image/jpeg;base64,${base64Image}`;
+          
+          console.log(`[${userId}] CDP screencast frame sent, size: ${base64Image.length} chars`);
+          
+          client.emit('screencast', {
+            data: dataUrl,
+            timestamp: Date.now()
+          });
         } catch (error) {
           this.logger.error(`[${userId}] Error sending screencast frame:`, error);
         }
@@ -933,12 +942,14 @@ export class SimpleWebsocketGateway
       const base64Image = screenshot.toString('base64');
       const dataUrl = `data:image/jpeg;base64,${base64Image}`;
       
+      console.log(`[${userId}] Screenshot taken, size: ${base64Image.length} chars`);
+      
       client.emit('screencast', {
         data: dataUrl,
         timestamp: Date.now()
       });
       
-      console.log(`[${userId}] ✅ Screenshot update sent`);
+      console.log(`[${userId}] ✅ Screenshot update sent to frontend`);
     } catch (error) {
       console.error(`[${userId}] Error forcing screenshot update:`, error);
     }

@@ -148,7 +148,8 @@ export default function LinkedInWebSocketConnect({
       });
 
       newSocket.on('screencast', (data) => {
-        setScreencastData(data);
+        console.log('Frontend: Received screencast update, data length:', data.data ? data.data.length : 'no data');
+        setScreencastData(data.data);
       });
 
       newSocket.on('inputUpdated', (data) => {
