@@ -36,6 +36,7 @@ import { SubscriptionValidator } from "@/app/api/validators/subscriptionValidato
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/user-context";
 import { RealtimeStatus } from "@/app/components/realtime-status";
+import { LinkedInIntegratedLogin } from "@/app/components/linkedin-integrated-login";
 
 interface DashboardHeaderProps {
   collapsed?: boolean;
@@ -60,6 +61,7 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
   const [linkedInEmail, setLinkedInEmail] = useState<string | null>(null);
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [showLinkedInLogin, setShowLinkedInLogin] = useState(false);
 
   const isActive = (path: string) => {
     // For LinkedIn connect page
@@ -341,14 +343,14 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
                 {!collapsed && <span>Connected</span>}
               </button>
             ) : (
-              <Link
-                href="/dashboard/automate"
+              <button
+                onClick={() => setShowLinkedInLogin(true)}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-xl font-outfit text-sm text-black/80 hover:bg-gray-50 transition-colors"
                 title={collapsed ? "Connect LinkedIn" : undefined}
               >
                 <Linkedin className="h-5 w-5" />
                 {!collapsed && <span>Connect LinkedIn</span>}
-              </Link>
+              </button>
             )}
             
           </div>
@@ -400,6 +402,21 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* LinkedIn Login Modal */}
+      {showLinkedInLogin && (
+        <LinkedInIntegratedLogin
+          onSuccess={(cookies) => {
+            console.log('LinkedIn connected successfully:', cookies);
+            setShowLinkedInLogin(false);
+            setHasLinkedInCredentials(true);
+          }}
+          onError={(error) => {
+            console.error('LinkedIn connection error:', error);
+          }}
+          onClose={() => setShowLinkedInLogin(false)}
+        />
+      )}
     </>
   );
 }
