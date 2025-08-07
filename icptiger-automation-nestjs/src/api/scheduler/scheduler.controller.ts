@@ -1,4 +1,11 @@
-import { Controller, Post, Get, HttpException, HttpStatus, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  HttpException,
+  HttpStatus,
+  Body,
+} from '@nestjs/common';
 import { SchedulerService } from '../../scheduler/scheduler.service';
 
 @Controller('api/scheduler')
@@ -23,7 +30,7 @@ export class SchedulerController {
           message: 'Failed to get scheduler status',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -45,7 +52,7 @@ export class SchedulerController {
           message: 'Failed to trigger follow requests processing',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -67,7 +74,7 @@ export class SchedulerController {
           message: 'Failed to trigger follow responses processing',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -89,7 +96,7 @@ export class SchedulerController {
           message: 'Failed to trigger pending jobs processing',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -98,19 +105,19 @@ export class SchedulerController {
   async triggerLinkedInLogin(@Body() body: { userId: string }) {
     try {
       const { userId } = body;
-      
+
       if (!userId) {
         throw new HttpException(
           {
             success: false,
             message: 'User ID is required',
           },
-          HttpStatus.BAD_REQUEST
+          HttpStatus.BAD_REQUEST,
         );
       }
 
       const sessionId = `${userId}_${Date.now()}`;
-      
+
       return {
         success: true,
         sessionId,
@@ -124,8 +131,8 @@ export class SchedulerController {
           message: 'Failed to create LinkedIn login session',
           error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
-} 
+}

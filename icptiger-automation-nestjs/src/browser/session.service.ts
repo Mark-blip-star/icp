@@ -23,37 +23,37 @@ export class SessionService {
 
   constructor(
     private puppeteerService: PuppeteerService,
-    private configService: ConfigService
+    private configService: ConfigService,
   ) {}
 
   async createSession(userId: string): Promise<BrowserSessionInfo> {
     try {
       this.logger.log(`Creating browser session for user ${userId}`);
-      
+
       const browser = await this.puppeteerService.launchBrowser();
       const page = await this.puppeteerService.createPage(browser);
-      
+
       browser.on('disconnected', () => {
         console.log(`[${userId}] Browser disconnected unexpectedly`);
       });
-      
+
       browser.on('targetdestroyed', (target) => {
         console.log(`[${userId}] Browser target destroyed:`, target.url());
       });
-      
+
       page.on('close', () => {
         console.log(`[${userId}] Page closed unexpectedly`);
       });
-      
+
       const clientSession = await page.target().createCDPSession();
-      
+
       // Don't block images and media for better user experience during login
       // await page.setRequestInterception(true);
       // page.on("request", (req) => {
       //   const blocked = ["image", "media"];
       //   blocked.includes(req.resourceType()) ? req.abort() : req.continue();
       // });
-      
+
       await page.goto('https://www.linkedin.com/login', {
         waitUntil: 'networkidle2',
         timeout: 60000,
@@ -75,25 +75,32 @@ export class SessionService {
 
       page.on('framenavigated', async (frame) => {
         if (frame !== page.mainFrame()) return;
-        
+
         const url = frame.url();
         console.log(`[${userId}] Navigation: ${url}`);
-        
-        if (url.includes('/feed') || url.includes('/mynetwork') || url.includes('/jobs')) {
+
+        if (
+          url.includes('/feed') ||
+          url.includes('/mynetwork') ||
+          url.includes('/jobs')
+        ) {
           sessionInfo.isLoggedIn = true;
           console.log(`[${userId}] Login success detected: ${url}`);
-          
+
           await this.saveLinkedInCookies(userId, sessionInfo.page);
-          
+
           if (sessionInfo.onLoginSuccess) {
             sessionInfo.onLoginSuccess();
           }
         }
       });
 
-      setTimeout(() => {
-        this.cleanupSession(userId);
-      }, 20 * 60 * 1000);
+      setTimeout(
+        () => {
+          this.cleanupSession(userId);
+        },
+        20 * 60 * 1000,
+      );
 
       this.logger.log(`Browser session created for user ${userId}`);
       return sessionInfo;
@@ -126,8 +133,8 @@ export class SessionService {
   private async saveLinkedInCookies(userId: string, page: Page): Promise<void> {
     try {
       const cookies = await page.cookies();
-      const liAt = cookies.find(c => c.name === 'li_at')?.value;
-      const liA = cookies.find(c => c.name === 'li_a')?.value;
+      const liAt = cookies.find((c) => c.name === 'li_at')?.value;
+      const liA = cookies.find((c) => c.name === 'li_a')?.value;
 
       if (liAt) {
         console.log(`[${userId}] Saving updated LinkedIn cookies to database`);
@@ -140,8 +147,6 @@ export class SessionService {
       console.error(`[${userId}] Error saving LinkedIn cookies:`, error);
     }
   }
-
-
 
   async getOrCreateSession(userId: string): Promise<BrowserSessionInfo> {
     let session = await this.getSession(userId);
@@ -171,7 +176,10 @@ export class SessionService {
       });
       return screenshot as Buffer;
     } catch (error) {
-      this.logger.error(`Failed to capture screenshot for user ${userId}:`, error);
+      this.logger.error(
+        `Failed to capture screenshot for user ${userId}:`,
+        error,
+      );
       return null;
     }
   }
@@ -182,10 +190,12 @@ export class SessionService {
 
     try {
       await this.updateSessionActivity(userId);
-      
+
       switch (event.type) {
         case 'click':
-          await session.page.click(`[data-x="${event.x}"][data-y="${event.y}"]`);
+          await session.page.click(
+            `[data-x="${event.x}"][data-y="${event.y}"]`,
+          );
           break;
         case 'move':
           await session.page.mouse.move(event.x, event.y);
@@ -202,7 +212,7 @@ export class SessionService {
 
     try {
       await this.updateSessionActivity(userId);
-      
+
       switch (event.type) {
         case 'keypress':
           await session.page.keyboard.press(event.key);
@@ -225,10 +235,13 @@ export class SessionService {
           try {
             await session.clientSession.send('Page.stopScreencast');
           } catch (error) {
-            this.logger.warn(`Error stopping screencast for user ${userId}:`, error);
+            this.logger.warn(
+              `Error stopping screencast for user ${userId}:`,
+              error,
+            );
           }
         }
-        
+
         if (session.browser) {
           await session.browser.close();
         }
@@ -246,7 +259,8 @@ export class SessionService {
 
     const now = new Date();
     const timeoutMs = 20 * 60 * 1000;
-    const isExpired = now.getTime() - session.lastActivity.getTime() > timeoutMs;
+    const isExpired =
+      now.getTime() - session.lastActivity.getTime() > timeoutMs;
 
     if (isExpired) {
       await this.closeSession(userId);
@@ -273,4 +287,4 @@ export class SessionService {
   getSessionCount(): number {
     return this.sessions.size;
   }
-} 
+}

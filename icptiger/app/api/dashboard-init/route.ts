@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
 
   // Get user
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -44,7 +47,9 @@ export async function GET(req: Request) {
   if (profile?.created_at) {
     const createdAt = new Date(profile.created_at);
     const now = new Date();
-    const daysSinceSignup = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceSignup = Math.floor(
+      (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
+    );
     daysRemaining = Math.max(0, 7 - daysSinceSignup);
   }
 
@@ -58,7 +63,11 @@ export async function GET(req: Request) {
   // Campaigns (first page)
   const limit = 10;
   const offset = 0;
-  const { data: campaigns, error: campaignError, count } = await supabase
+  const {
+    data: campaigns,
+    error: campaignError,
+    count,
+  } = await supabase
     .from("linkedin_campaigns")
     .select("*", { count: "exact" })
     .eq("user_id", user.id)
@@ -72,15 +81,25 @@ export async function GET(req: Request) {
     .select("campaign_id, status")
     .in("campaign_id", campaignIds);
 
-  const statsMap: Record<string, { sent: number; accepted: number; cancelled : number }> = {};
+  const statsMap: Record<string, { sent: number; accepted: number; cancelled: number }> = {};
   for (const c of connections || []) {
     if (!statsMap[c.campaign_id]) {
       statsMap[c.campaign_id] = { sent: 0, accepted: 0, cancelled: 0 };
     }
-    if (["queued", "pending", "connected", "paused","followup_message_send",'second_followup_message_send','cancelled'].includes(c.status)) {
+    if (
+      [
+        "queued",
+        "pending",
+        "connected",
+        "paused",
+        "followup_message_send",
+        "second_followup_message_send",
+        "cancelled",
+      ].includes(c.status)
+    ) {
       statsMap[c.campaign_id].sent++;
     }
-    if (["connected","followup_message_send",'second_followup_message_send'].includes(c.status)) {
+    if (["connected", "followup_message_send", "second_followup_message_send"].includes(c.status)) {
       statsMap[c.campaign_id].accepted++;
     }
     if (["cancelled"].includes(c.status)) {
@@ -89,7 +108,8 @@ export async function GET(req: Request) {
   }
   const campaignsWithStats = (campaigns || []).map((c) => {
     const stats = statsMap[c.id] || { sent: 0, accepted: 0, cancelled: 0 };
-    const responseRate = stats.sent > 0 ? Math.round(((stats.accepted / stats.sent) * 100) * 10) / 10 : 0;
+    const responseRate =
+      stats.sent > 0 ? Math.round((stats.accepted / stats.sent) * 100 * 10) / 10 : 0;
     return {
       ...c,
       sent: stats.sent,
@@ -107,4 +127,4 @@ export async function GET(req: Request) {
     campaigns: campaignsWithStats,
     campaignsCount: count || 0,
   });
-} 
+}

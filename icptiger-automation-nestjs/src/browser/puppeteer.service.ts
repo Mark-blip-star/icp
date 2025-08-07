@@ -20,7 +20,7 @@ export class PuppeteerService implements OnModuleInit {
   async launchBrowser(): Promise<Browser> {
     try {
       const config = this.configService.get('browser');
-      
+
       if (!config) {
         throw new Error('Browser configuration not found');
       }
@@ -49,7 +49,7 @@ export class PuppeteerService implements OnModuleInit {
 
       this.browser = await puppeteer.launch(browserOptions);
       this.logger.log('Browser launched successfully');
-      
+
       return this.browser;
     } catch (error) {
       this.logger.error('Failed to launch browser:', error);
@@ -60,22 +60,22 @@ export class PuppeteerService implements OnModuleInit {
   async createPage(browser?: Browser): Promise<Page> {
     try {
       const targetBrowser = browser || this.browser;
-      
+
       if (!targetBrowser) {
         throw new Error('No browser instance available');
       }
 
       const page = await targetBrowser.newPage();
-      
+
       // Set larger viewport for better user experience
       await page.setViewport({
         width: 1920,
         height: 1080,
         deviceScaleFactor: 1,
       });
-      
+
       await page.setUserAgent(
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       );
 
       return page;
@@ -100,4 +100,4 @@ export class PuppeteerService implements OnModuleInit {
   getBrowser(): Browser | null {
     return this.browser;
   }
-} 
+}

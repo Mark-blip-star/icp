@@ -1,32 +1,30 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { createClient } from '@/utils/supabase/client';
-import { io, Socket } from 'socket.io-client';
-import { useUser } from '@/context/user-context';
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { io, Socket } from "socket.io-client";
+import { useUser } from "@/context/user-context";
 
 interface RealtimeContextType {
   // Campaign updates
   campaigns: any[];
   updateCampaigns: (campaigns: any[]) => void;
-  
+
   // Connection updates
   connections: any[];
   updateConnections: (connections: any[]) => void;
-  
+
   // Metrics updates
   metrics: any;
   updateMetrics: (metrics: any) => void;
-  
+
   // Activity updates
   activities: any[];
   updateActivities: (activities: any[]) => void;
-  
 
-  
   // Connection status
   isConnected: boolean;
-  
+
   // Manual refresh functions
   refreshCampaigns: () => Promise<void>;
   refreshMetrics: () => Promise<void>;
@@ -42,7 +40,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const [activities, setActivities] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
-  
+
   const user = useUser();
   const supabase = createClient();
 
@@ -61,34 +59,35 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
     // Subscribe to LinkedIn connection status changes
     const profileSubscription = supabase
-      .channel('profile-changes')
+      .channel("profile-changes")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
           filter: `id=eq.${userId}`,
         },
         (payload) => {
           // If linkedin_connected status changed
-          if ('linkedin_connected' in payload.new) {
+          if ("linkedin_connected" in payload.new) {
             const isLinkedInConnected = payload.new.linkedin_connected;
             // Update local storage to match database state
             if (isLinkedInConnected) {
-              localStorage.setItem('linkedInCredentials', 'true');
+              localStorage.setItem("linkedInCredentials", "true");
             } else {
-              localStorage.removeItem('linkedInCredentials');
+              localStorage.removeItem("linkedInCredentials");
             }
             // Dispatch event to notify components
-            window.dispatchEvent(new Event('linkedInCredentialsChanged'));
+            window.dispatchEvent(new Event("linkedInCredentialsChanged"));
           }
-        }
+        },
       )
       .subscribe();
 
     // Initialize Socket.IO for LinkedIn automation updates
-    const LOGIN_API_BASE = process.env.NEXT_PUBLIC_SOCKET_API_BASE_URL || "https://socket.icptiger.com";
+    const LOGIN_API_BASE =
+      process.env.NEXT_PUBLIC_SOCKET_API_BASE_URL || "https://socket.icptiger.com";
     const sock = io(LOGIN_API_BASE, {
       query: { user_id: userId },
     });
@@ -124,66 +123,62 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       refreshActivities();
     });
 
-
-
     setSocket(sock);
 
     // Set up Supabase Realtime subscriptions
     const setupRealtimeSubscriptions = async () => {
       // Subscribe to campaign changes
       const campaignsSubscription = supabase
-        .channel('campaigns')
+        .channel("campaigns")
         .on(
-          'postgres_changes',
+          "postgres_changes",
           {
-            event: '*',
-            schema: 'public',
-            table: 'linkedin_campaigns',
+            event: "*",
+            schema: "public",
+            table: "linkedin_campaigns",
             filter: `user_id=eq.${userId}`,
           },
           (payload) => {
             refreshCampaigns();
             refreshMetrics();
-          }
+          },
         )
         .subscribe();
 
       // Subscribe to connection changes
       const connectionsSubscription = supabase
-        .channel('connections')
+        .channel("connections")
         .on(
-          'postgres_changes',
+          "postgres_changes",
           {
-            event: '*',
-            schema: 'public',
-            table: 'linkedin_connections',
+            event: "*",
+            schema: "public",
+            table: "linkedin_connections",
             filter: `user_id=eq.${userId}`,
           },
           (payload) => {
             refreshCampaigns();
             refreshMetrics();
-          }
+          },
         )
         .subscribe();
 
       // Subscribe to log changes
       const logsSubscription = supabase
-        .channel('logs')
+        .channel("logs")
         .on(
-          'postgres_changes',
+          "postgres_changes",
           {
-            event: '*',
-            schema: 'public',
-            table: 'linkedin_logs',
+            event: "*",
+            schema: "public",
+            table: "linkedin_logs",
             filter: `user_id=eq.${userId}`,
           },
           (payload) => {
             refreshActivities();
-          }
+          },
         )
         .subscribe();
-
-
 
       return () => {
         campaignsSubscription.unsubscribe();
@@ -205,31 +200,31 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   // Manual refresh functions
   const refreshCampaigns = useCallback(async () => {
     try {
-      const res = await fetch('/api/campaigns');
+      const res = await fetch("/api/campaigns");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.campaigns) {
         setCampaigns(data.campaigns);
       }
     } catch (error) {
-      console.error('Failed to refresh campaigns:', error);
+      console.error("Failed to refresh campaigns:", error);
     }
   }, []);
 
   const refreshMetrics = useCallback(async () => {
     try {
-      const res = await fetch('/api/metrics');
+      const res = await fetch("/api/metrics");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setMetrics(data);
     } catch (error) {
-      console.error('Failed to refresh metrics:', error);
+      console.error("Failed to refresh metrics:", error);
     }
   }, []);
 
   const refreshActivities = useCallback(async () => {
     try {
-      const res = await fetch('/api/logs?limit=20&offset=0');
+      const res = await fetch("/api/logs?limit=20&offset=0");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.logs) {
@@ -245,11 +240,9 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         setActivities(activities);
       }
     } catch (error) {
-      console.error('Failed to refresh activities:', error);
+      console.error("Failed to refresh activities:", error);
     }
   }, []);
-
-
 
   // Initial data load
   useEffect(() => {
@@ -275,11 +268,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     refreshActivities,
   };
 
-  return (
-    <RealtimeContext.Provider value={value}>
-      {children}
-    </RealtimeContext.Provider>
-  );
+  return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;
 }
 
 export function useRealtime() {
@@ -302,4 +291,4 @@ export function useRealtime() {
     };
   }
   return context;
-} 
+}

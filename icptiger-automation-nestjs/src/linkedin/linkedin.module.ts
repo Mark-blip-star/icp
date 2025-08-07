@@ -9,4 +9,4 @@ import { LinkedInAutomationService } from './automation.service';
   providers: [LinkedInSettingsService, LinkedInAutomationService],
   exports: [LinkedInSettingsService, LinkedInAutomationService],
 })
-export class LinkedInModule {} 
+export class LinkedInModule {}

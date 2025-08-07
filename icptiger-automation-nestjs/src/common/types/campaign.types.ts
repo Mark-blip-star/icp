@@ -93,4 +93,4 @@ export interface UserProfile {
   trial_end_date: string | null;
   monthly_imports: number;
   last_import_reset: string | null;
-} 
+}

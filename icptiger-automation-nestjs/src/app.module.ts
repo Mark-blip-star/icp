@@ -16,7 +16,7 @@ import { SchedulerController } from './api/scheduler/scheduler.controller';
     ConfigModule,
     DatabaseModule,
     BrowserModule,
-    LinkedInModule, 
+    LinkedInModule,
     JobsModule,
     SchedulerModule,
     WebsocketModule,
