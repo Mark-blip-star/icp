@@ -103,6 +103,18 @@ export class SimpleWebsocketGateway
             });
           });
 
+          // Встановлюємо callback для автоматичного оновлення скріншотів
+          this.linkedInAutomationService.setScreenshotUpdateCallback(
+            userId,
+            async () => {
+              try {
+                await this.forceScreenshotUpdate(userId, client, session.page);
+              } catch (error) {
+                console.error(`[${userId}] Error updating screenshot:`, error);
+              }
+            },
+          );
+
           client.emit('readyForLogin', {
             message: 'LinkedIn session already active, ready for interaction',
             url: session.page.url(),

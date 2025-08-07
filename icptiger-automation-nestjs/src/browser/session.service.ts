@@ -92,31 +92,243 @@ export class SessionService {
             sessionInfo.onLoginSuccess();
           }
         }
+
+        // Also trigger screenshot update for any navigation
+        if (sessionInfo.onScreenshotUpdate) {
+          sessionInfo.onScreenshotUpdate();
+        }
       });
 
       // Monitor DOM changes for automatic screenshot updates
-      page.on('load', async () => {
+      page.on('load', () => {
         console.log(`[${userId}] Page loaded, triggering screenshot update`);
-        if (sessionInfo.onScreenshotUpdate) {
-          sessionInfo.onScreenshotUpdate();
-        }
+        // Wait a bit for dynamic content to load
+        setTimeout(() => {
+          if (sessionInfo.onScreenshotUpdate) {
+            sessionInfo.onScreenshotUpdate();
+          }
+        }, 1500);
       });
 
-      page.on('domcontentloaded', async () => {
+      page.on('domcontentloaded', () => {
         console.log(
           `[${userId}] DOM content loaded, triggering screenshot update`,
         );
-        if (sessionInfo.onScreenshotUpdate) {
-          sessionInfo.onScreenshotUpdate();
-        }
+        // Wait for images and other resources
+        setTimeout(() => {
+          if (sessionInfo.onScreenshotUpdate) {
+            sessionInfo.onScreenshotUpdate();
+          }
+        }, 1000);
       });
 
       // Monitor for network idle to catch dynamic content changes
-      page.on('networkidle0', async () => {
+      page.on('networkidle0', () => {
         console.log(`[${userId}] Network idle, triggering screenshot update`);
         if (sessionInfo.onScreenshotUpdate) {
           sessionInfo.onScreenshotUpdate();
         }
+      });
+
+      // Monitor for network idle2 (less strict, catches more dynamic content)
+      page.on('networkidle2', () => {
+        console.log(`[${userId}] Network idle2, triggering screenshot update`);
+        if (sessionInfo.onScreenshotUpdate) {
+          sessionInfo.onScreenshotUpdate();
+        }
+      });
+
+      // Monitor for console messages (CAPTCHA often logs messages)
+      page.on('console', (msg) => {
+        if (msg.text().includes('captcha') || msg.text().includes('CAPTCHA')) {
+          console.log(
+            `[${userId}] CAPTCHA detected in console, triggering screenshot update`,
+          );
+          // Wait for CAPTCHA to fully load
+          setTimeout(() => {
+            if (sessionInfo.onScreenshotUpdate) {
+              sessionInfo.onScreenshotUpdate();
+            }
+          }, 2000);
+
+          // Additional screenshot for CAPTCHA after 1.5 more seconds
+          setTimeout(() => {
+            if (sessionInfo.onScreenshotUpdate) {
+              console.log(
+                `[${userId}] Additional CAPTCHA screenshot update for complete load`,
+              );
+              sessionInfo.onScreenshotUpdate();
+            }
+          }, 3500); // 2 + 1.5 = 3.5 seconds total
+        }
+      });
+
+      // Monitor for response events (CAPTCHA loads via AJAX)
+      page.on('response', (response) => {
+        const url = response.url();
+        if (
+          url.includes('captcha') ||
+          url.includes('challenge') ||
+          url.includes('verify')
+        ) {
+          console.log(
+            `[${userId}] CAPTCHA/Challenge response detected, triggering screenshot update`,
+          );
+          // Wait for response content to be processed
+          setTimeout(() => {
+            if (sessionInfo.onScreenshotUpdate) {
+              sessionInfo.onScreenshotUpdate();
+            }
+          }, 1500);
+
+          // Additional screenshot for response after 1.5 more seconds
+          setTimeout(() => {
+            if (sessionInfo.onScreenshotUpdate) {
+              console.log(
+                `[${userId}] Additional response screenshot update for complete load`,
+              );
+              sessionInfo.onScreenshotUpdate();
+            }
+          }, 3000); // 1.5 + 1.5 = 3 seconds total
+        }
+      });
+
+      // Set up MutationObserver for DOM changes
+      await page.evaluateOnNewDocument(() => {
+        // Create a debounced function to avoid too many updates
+        let updateTimeout: NodeJS.Timeout;
+        let lastUpdateTime = 0;
+        const MIN_UPDATE_INTERVAL = 1000; // 1 second minimum between updates
+
+        const debouncedUpdate = () => {
+          const now = Date.now();
+          if (now - lastUpdateTime < MIN_UPDATE_INTERVAL) {
+            return; // Skip if too soon
+          }
+
+          clearTimeout(updateTimeout);
+          updateTimeout = setTimeout(() => {
+            lastUpdateTime = now;
+            // Send a custom event to trigger screenshot update
+            window.dispatchEvent(new CustomEvent('domChanged'));
+          }, 1000); // 1 second debounce for content to fully load
+        };
+
+        // Observe DOM changes
+        const observer = new MutationObserver((mutations) => {
+          let shouldUpdate = false;
+          let hasSignificantChange = false;
+
+          mutations.forEach((mutation) => {
+            // Check for added nodes (new elements like CAPTCHA)
+            if (
+              mutation.type === 'childList' &&
+              mutation.addedNodes.length > 0
+            ) {
+              mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                  const element = node as Element;
+                  // Check for CAPTCHA-related elements
+                  if (
+                    element.id?.includes('captcha') ||
+                    element.className?.includes('captcha') ||
+                    element.innerHTML?.includes('captcha') ||
+                    element.innerHTML?.includes('challenge') ||
+                    element.innerHTML?.includes('verify')
+                  ) {
+                    shouldUpdate = true;
+                    hasSignificantChange = true;
+                  }
+                }
+              });
+            }
+
+            // Check for attribute changes (important for dynamic content)
+            if (mutation.type === 'attributes') {
+              const target = mutation.target as Element;
+              if (
+                target.id?.includes('captcha') ||
+                target.className?.includes('captcha') ||
+                target.innerHTML?.includes('captcha')
+              ) {
+                shouldUpdate = true;
+                hasSignificantChange = true;
+              }
+            }
+
+            // Check for any significant DOM changes (not just CAPTCHA)
+            if (
+              mutation.type === 'childList' &&
+              mutation.addedNodes.length > 0
+            ) {
+              // Any new element added to the page
+              shouldUpdate = true;
+            }
+
+            // Check for text content changes (important for dynamic forms)
+            if (mutation.type === 'characterData') {
+              shouldUpdate = true;
+            }
+
+            // Check for subtree changes (any nested element changes)
+            if (
+              mutation.type === 'childList' &&
+              mutation.removedNodes.length > 0
+            ) {
+              shouldUpdate = true;
+            }
+          });
+
+          if (shouldUpdate) {
+            if (hasSignificantChange) {
+              // For CAPTCHA and important changes, wait longer for full content load
+              clearTimeout(updateTimeout);
+              updateTimeout = setTimeout(() => {
+                lastUpdateTime = Date.now();
+                window.dispatchEvent(new CustomEvent('domChanged'));
+              }, 2000); // 2 seconds for CAPTCHA to fully load
+            } else {
+              debouncedUpdate();
+            }
+          }
+        });
+
+        // Start observing
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          characterData: true,
+          attributeFilter: ['id', 'class', 'style', 'src', 'href'],
+        });
+
+        // Listen for the custom event
+        window.addEventListener('domChanged', () => {
+          // This will be handled by the page listener
+        });
+      });
+
+      // Listen for the custom DOM change event
+      page.on('domChanged', () => {
+        console.log(
+          `[${userId}] DOM changed event detected, triggering screenshot update`,
+        );
+        // Wait for content to fully load after DOM changes
+        setTimeout(() => {
+          if (sessionInfo.onScreenshotUpdate) {
+            sessionInfo.onScreenshotUpdate();
+          }
+        }, 1500);
+
+        // Additional screenshot after 1.5 more seconds to ensure full content load
+        setTimeout(() => {
+          if (sessionInfo.onScreenshotUpdate) {
+            console.log(
+              `[${userId}] Additional screenshot update for complete content load`,
+            );
+            sessionInfo.onScreenshotUpdate();
+          }
+        }, 3000); // 1.5 + 1.5 = 3 seconds total
       });
 
       // Auto-cleanup after 20 minutes
