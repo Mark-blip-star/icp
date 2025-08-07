@@ -24,12 +24,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogHeader,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubscriptionValidator } from "@/app/api/validators/subscriptionValidator";
@@ -41,14 +36,18 @@ import { LinkedInIntegratedLogin } from "@/app/components/linkedin-integrated-lo
 interface DashboardHeaderProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
-  trialStatus: { 
-    daysRemaining?: number; 
+  trialStatus: {
+    daysRemaining?: number;
     isLoading: boolean;
     subscribed?: boolean;
   };
 }
 
-export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStatus }: DashboardHeaderProps) {
+export function DashboardHeader({
+  collapsed = false,
+  onToggleCollapse,
+  trialStatus,
+}: DashboardHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useUser();
@@ -133,10 +132,7 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
     // Cleanup
     return () => {
       window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener(
-        "linkedInCredentialsChanged",
-        handleCustomEvent
-      );
+      window.removeEventListener("linkedInCredentialsChanged", handleCustomEvent);
     };
   }, []);
 
@@ -191,9 +187,7 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
       if (!response.ok) {
         const errorData = await response.json();
         setLoading(false);
-        throw new Error(
-          errorData.error || "Failed to disconnect account from database"
-        );
+        throw new Error(errorData.error || "Failed to disconnect account from database");
       }
 
       // Clear local storage
@@ -217,32 +211,35 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
     <>
       <div className="flex h-screen">
         {/* Sidebar */}
-        <aside className={cn(
-          "relative border-r border-black/10 bg-white flex flex-col shadow-sm overflow-hidden transition-all duration-300",
-          collapsed ? "w-16" : "w-52"
-        )}>
+        <aside
+          className={cn(
+            "relative border-r border-black/10 bg-white flex flex-col shadow-sm overflow-hidden transition-all duration-300",
+            collapsed ? "w-16" : "w-52",
+          )}
+        >
           {/* Collapse/Expand Button - positioned in the middle of sidebar */}
           <button
             onClick={onToggleCollapse}
             className={cn(
               "absolute z-20 p-1 rounded-full bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-800 hover:border-gray-300 transition-all shadow-sm hover:shadow-md",
-              "flex items-center justify-center -right-2.5 top-1/2 -translate-y-1/2"
+              "flex items-center justify-center -right-2.5 top-1/2 -translate-y-1/2",
             )}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {collapsed ? (
-              <PanelRight className="h-4 w-4" />
-            ) : (
-              <PanelLeft className="h-4 w-4" />
-            )}
+            {collapsed ? <PanelRight className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
           </button>
 
           {/* Logo */}
-          <div className={cn(
-            "flex-shrink-0 flex items-center justify-center h-[60px]", // was h-[88px]
-            collapsed ? "w-full" : "w-full px-4"
-          )}>
-            <Link href="/dashboard" className="flex items-center justify-center hover:opacity-90 transition-opacity">
+          <div
+            className={cn(
+              "flex-shrink-0 flex items-center justify-center h-[60px]", // was h-[88px]
+              collapsed ? "w-full" : "w-full px-4",
+            )}
+          >
+            <Link
+              href="/dashboard"
+              className="flex items-center justify-center hover:opacity-90 transition-opacity"
+            >
               {collapsed ? (
                 <Image
                   src="/images/logo.png"
@@ -268,41 +265,41 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
           {/* Navigation */}
           <nav className="flex-1 px-2 overflow-y-auto">
             <div className="space-y-3 mt-4">
-              <Link 
-                href="/dashboard/automate" 
+              <Link
+                href="/dashboard/automate"
                 className={cn(
                   "flex items-center justify-center py-3 rounded-xl font-outfit transition-all duration-200 w-full group text-sm",
                   !collapsed && "px-4",
                   isActive("/dashboard/automate")
                     ? "text-black font-medium bg-gray-50 shadow-sm"
-                    : "text-black/80 hover:text-black hover:bg-gray-50/80 hover:shadow-sm"
+                    : "text-black/80 hover:text-black hover:bg-gray-50/80 hover:shadow-sm",
                 )}
                 title={collapsed ? "Automate" : undefined}
               >
                 {collapsed ? <TrendingUp className="h-5 w-5" /> : <span>Automate</span>}
               </Link>
-              
-              <Link 
-                href="/dashboard/settings" 
+
+              <Link
+                href="/dashboard/settings"
                 className={cn(
                   "flex items-center justify-center py-3 rounded-xl font-outfit transition-all duration-200 w-full group text-sm",
                   !collapsed && "px-4",
                   isActive("/dashboard/settings")
                     ? "text-black font-medium bg-gray-50 shadow-sm"
-                    : "text-black/80 hover:text-black hover:bg-gray-50/80 hover:shadow-sm"
+                    : "text-black/80 hover:text-black hover:bg-gray-50/80 hover:shadow-sm",
                 )}
                 title={collapsed ? "Settings" : undefined}
               >
                 {collapsed ? <Settings className="h-5 w-5" /> : <span>Settings</span>}
               </Link>
-              
-              <Link 
+
+              <Link
                 href="/pricing"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
                   "flex items-center justify-center py-3 rounded-xl font-outfit transition-all duration-200 w-full text-black/80 hover:text-black hover:bg-gray-50/80 hover:shadow-sm group text-sm",
-                  !collapsed && "px-4"
+                  !collapsed && "px-4",
                 )}
                 title={collapsed ? "Subscribe" : undefined}
               >
@@ -316,15 +313,23 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
             <div className="text-center">
               {!collapsed ? (
                 <>
-                  <h2 className="text-lg font-recoleta font-black text-[#0A66C2] tracking-tight">Tiger</h2>
+                  <h2 className="text-lg font-recoleta font-black text-[#0A66C2] tracking-tight">
+                    Tiger
+                  </h2>
                   {trialStatus?.isLoading ? (
                     <span className="text-sm font-outfit text-gray-500">Checking status...</span>
                   ) : trialStatus?.subscribed === true ? (
-                    <span className="text-sm font-outfit text-gray-600 font-semibold">Professional Plan</span>
+                    <span className="text-sm font-outfit text-gray-600 font-semibold">
+                      Professional Plan
+                    </span>
                   ) : trialStatus?.daysRemaining && trialStatus.daysRemaining > 0 ? (
-                    <span className="text-gray-500 text-sm font-outfit font-light">{trialStatus.daysRemaining} days left in your free trial</span>
+                    <span className="text-gray-500 text-sm font-outfit font-light">
+                      {trialStatus.daysRemaining} days left in your free trial
+                    </span>
                   ) : (
-                    <span className="text-sm font-outfit text-red-500 font-semibold">Your free trial has ended</span>
+                    <span className="text-sm font-outfit text-red-500 font-semibold">
+                      Your free trial has ended
+                    </span>
                   )}
                 </>
               ) : null}
@@ -352,7 +357,6 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
                 {!collapsed && <span>Connect LinkedIn</span>}
               </button>
             )}
-            
           </div>
         </aside>
       </div>
@@ -376,12 +380,12 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
                 <span className="font-semibold text-gray-800">Status:</span>
                 <span className="font-medium text-gray-700">
                   {emailLoading
-                    ? 'Loading...'
+                    ? "Loading..."
                     : emailError
-                      ? 'Error'
+                      ? "Error"
                       : hasLinkedInCredentials
-                        ? 'Connected'
-                        : 'Not Connected'}
+                        ? "Connected"
+                        : "Not Connected"}
                 </span>
               </div>
               <p className="text-sm text-gray-500 mt-1">You’re all set! Automation is running.</p>
@@ -407,12 +411,12 @@ export function DashboardHeader({ collapsed = false, onToggleCollapse, trialStat
       {showLinkedInLogin && (
         <LinkedInIntegratedLogin
           onSuccess={(cookies) => {
-            console.log('LinkedIn connected successfully:', cookies);
+            console.log("LinkedIn connected successfully:", cookies);
             setShowLinkedInLogin(false);
             setHasLinkedInCredentials(true);
           }}
           onError={(error) => {
-            console.error('LinkedIn connection error:', error);
+            console.error("LinkedIn connection error:", error);
           }}
           onClose={() => setShowLinkedInLogin(false)}
         />

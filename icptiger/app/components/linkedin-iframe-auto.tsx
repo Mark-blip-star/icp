@@ -7,7 +7,9 @@ export function LinkedInIframeAuto() {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showIframe, setShowIframe] = useState(false);
-  const [loginStatus, setLoginStatus] = useState<'idle' | 'logging-in' | 'success' | 'failed'>('idle');
+  const [loginStatus, setLoginStatus] = useState<"idle" | "logging-in" | "success" | "failed">(
+    "idle",
+  );
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -15,7 +17,7 @@ export function LinkedInIframeAuto() {
     setIsLoading(true);
     setError(null);
     setShowIframe(true);
-    setLoginStatus('logging-in');
+    setLoginStatus("logging-in");
     setIsLoading(false);
   };
 
@@ -29,26 +31,27 @@ export function LinkedInIframeAuto() {
       try {
         const iframe = iframeRef.current;
         const currentUrl = iframe.contentWindow?.location.href;
-        
+
         if (currentUrl) {
-          console.log('Current iframe URL:', currentUrl);
-          
+          console.log("Current iframe URL:", currentUrl);
+
           // Check if user is logged in
-          if (currentUrl.includes('/feed') || 
-              currentUrl.includes('/mynetwork') || 
-              currentUrl.includes('/jobs') || 
-              currentUrl.includes('/messaging') ||
-              currentUrl.includes('/mynetwork/invitation-manager') ||
-              currentUrl.includes('/notifications')) {
-            
-            console.log('Login detected! Extracting cookies...');
-            setLoginStatus('success');
+          if (
+            currentUrl.includes("/feed") ||
+            currentUrl.includes("/mynetwork") ||
+            currentUrl.includes("/jobs") ||
+            currentUrl.includes("/messaging") ||
+            currentUrl.includes("/mynetwork/invitation-manager") ||
+            currentUrl.includes("/notifications")
+          ) {
+            console.log("Login detected! Extracting cookies...");
+            setLoginStatus("success");
             extractCookiesFromIframe();
           }
         }
       } catch (error) {
         // CORS error - this is expected, we'll use alternative method
-        console.log('CORS error, using alternative cookie extraction');
+        console.log("CORS error, using alternative cookie extraction");
       }
     };
 
@@ -67,7 +70,7 @@ export function LinkedInIframeAuto() {
       // Try to inject a script to extract cookies
       const iframe = iframeRef.current;
       if (!iframe || !iframe.contentWindow) {
-        throw new Error('Iframe not available');
+        throw new Error("Iframe not available");
       }
 
       // Create a script to extract cookies
@@ -97,7 +100,7 @@ export function LinkedInIframeAuto() {
       `;
 
       // Inject the script
-      const scriptElement = iframe.contentDocument?.createElement('script');
+      const scriptElement = iframe.contentDocument?.createElement("script");
       if (scriptElement) {
         scriptElement.textContent = script;
         iframe.contentDocument?.head.appendChild(scriptElement);
@@ -105,47 +108,46 @@ export function LinkedInIframeAuto() {
 
       // Listen for the response
       const handleMessage = (event: MessageEvent) => {
-        if (event.data.type === 'linkedin-cookies') {
-          console.log('Received cookies:', event.data.cookies);
+        if (event.data.type === "linkedin-cookies") {
+          console.log("Received cookies:", event.data.cookies);
           if (event.data.cookies.li_at) {
             handleLoginSuccess(event.data.cookies);
           } else {
-            setError('No authentication cookies found. Please try logging in again.');
-            setLoginStatus('failed');
+            setError("No authentication cookies found. Please try logging in again.");
+            setLoginStatus("failed");
           }
-          window.removeEventListener('message', handleMessage);
-        } else if (event.data.type === 'linkedin-cookies-error') {
-          console.error('Cookie extraction error:', event.data.error);
-          setError('Failed to extract cookies. Please try again.');
-          setLoginStatus('failed');
-          window.removeEventListener('message', handleMessage);
+          window.removeEventListener("message", handleMessage);
+        } else if (event.data.type === "linkedin-cookies-error") {
+          console.error("Cookie extraction error:", event.data.error);
+          setError("Failed to extract cookies. Please try again.");
+          setLoginStatus("failed");
+          window.removeEventListener("message", handleMessage);
         }
       };
 
-      window.addEventListener('message', handleMessage);
+      window.addEventListener("message", handleMessage);
 
       // Timeout after 10 seconds
       setTimeout(() => {
-        window.removeEventListener('message', handleMessage);
-        setError('Timeout waiting for cookies. Please try again.');
-        setLoginStatus('failed');
+        window.removeEventListener("message", handleMessage);
+        setError("Timeout waiting for cookies. Please try again.");
+        setLoginStatus("failed");
       }, 10000);
-
     } catch (error) {
-      console.error('Error in cookie extraction:', error);
-      setError('Failed to extract cookies. Please try again.');
-      setLoginStatus('failed');
+      console.error("Error in cookie extraction:", error);
+      setError("Failed to extract cookies. Please try again.");
+      setLoginStatus("failed");
     }
   };
 
   const handleLoginSuccess = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log('Saving cookies to backend...');
-      const response = await fetch('/api/linkedin/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      console.log("Saving cookies to backend...");
+      const response = await fetch("/api/linkedin/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: 'iframe-auth@example.com',
+          email: "iframe-auth@example.com",
           li_at: cookies.li_at,
           li_a: cookies.li_a,
         }),
@@ -154,28 +156,27 @@ export function LinkedInIframeAuto() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to save LinkedIn credentials');
+        throw new Error(result.error || "Failed to save LinkedIn credentials");
       }
 
-      console.log('Cookies saved successfully!');
+      console.log("Cookies saved successfully!");
       setIsConnected(true);
       localStorage.setItem("linkedInCredentials", "true");
       window.dispatchEvent(new Event("linkedInCredentialsChanged"));
-      
+
       setTimeout(() => {
         window.location.reload();
       }, 2000);
-
     } catch (error) {
-      console.error('Error saving cookies:', error);
-      setError('Failed to save login credentials. Please try again.');
-      setLoginStatus('failed');
+      console.error("Error saving cookies:", error);
+      setError("Failed to save login credentials. Please try again.");
+      setLoginStatus("failed");
     }
   };
 
   const closeIframe = () => {
     setShowIframe(false);
-    setLoginStatus('idle');
+    setLoginStatus("idle");
     if (checkIntervalRef.current) {
       clearInterval(checkIntervalRef.current);
     }
@@ -202,11 +203,14 @@ export function LinkedInIframeAuto() {
       <div className="text-center mb-8">
         <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
           <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
           </svg>
         </div>
         <h1 className="text-4xl font-bold text-gray-900 mb-3">
-          Connect Your <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">LinkedIn</span>
+          Connect Your{" "}
+          <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+            LinkedIn
+          </span>
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
           Log in directly to LinkedIn and we'll automatically connect your account.
@@ -261,20 +265,19 @@ export function LinkedInIframeAuto() {
           <div className="bg-white rounded-lg w-full max-w-5xl h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-lg font-semibold">LinkedIn Login</h3>
-              <button
-                onClick={closeIframe}
-                className="text-gray-400 hover:text-gray-600"
-              >
+              <button onClick={closeIframe} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="flex-1 p-4">
-              {loginStatus === 'logging-in' && (
+              {loginStatus === "logging-in" && (
                 <div className="h-full flex items-center justify-center">
                   <div className="text-center">
                     <LoadingSpinner size="lg" color="primary" />
                     <p className="text-gray-600 mt-4">Please complete your LinkedIn login below</p>
-                    <p className="text-sm text-gray-500 mt-2">We'll automatically detect when you're logged in</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      We'll automatically detect when you're logged in
+                    </p>
                   </div>
                 </div>
               )}
@@ -305,4 +308,4 @@ export function LinkedInIframeAuto() {
       )}
     </div>
   );
-} 
+}

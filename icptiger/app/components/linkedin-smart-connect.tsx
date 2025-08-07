@@ -8,17 +8,19 @@ export function LinkedInSmartConnect() {
   const [error, setError] = useState<string | null>(null);
   const [showIframe, setShowIframe] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
-  const [liAt, setLiAt] = useState('');
-  const [liA, setLiA] = useState('');
+  const [liAt, setLiAt] = useState("");
+  const [liA, setLiA] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loginStatus, setLoginStatus] = useState<'idle' | 'logging-in' | 'success' | 'failed'>('idle');
+  const [loginStatus, setLoginStatus] = useState<"idle" | "logging-in" | "success" | "failed">(
+    "idle",
+  );
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const handleLaunchIframe = () => {
     setIsLoading(true);
     setError(null);
     setShowIframe(true);
-    setLoginStatus('logging-in');
+    setLoginStatus("logging-in");
     setIsLoading(false);
   };
 
@@ -35,11 +37,11 @@ export function LinkedInSmartConnect() {
     setError(null);
 
     try {
-      const response = await fetch('/api/linkedin/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/linkedin/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: 'manual-auth@example.com',
+          email: "manual-auth@example.com",
           li_at: liAt.trim(),
           li_a: liA.trim() || null,
         }),
@@ -48,19 +50,18 @@ export function LinkedInSmartConnect() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to connect LinkedIn');
+        throw new Error(result.error || "Failed to connect LinkedIn");
       }
 
       setIsConnected(true);
       localStorage.setItem("linkedInCredentials", "true");
       window.dispatchEvent(new Event("linkedInCredentialsChanged"));
-      
+
       setTimeout(() => {
         window.location.reload();
       }, 2000);
-
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Connection failed');
+      setError(err instanceof Error ? err.message : "Connection failed");
     } finally {
       setIsLoading(false);
     }
@@ -74,31 +75,31 @@ export function LinkedInSmartConnect() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       // Only accept messages from LinkedIn
-      if (event.origin !== 'https://www.linkedin.com') return;
-      
-      if (event.data.type === 'linkedin-login-success') {
-        setLoginStatus('success');
+      if (event.origin !== "https://www.linkedin.com") return;
+
+      if (event.data.type === "linkedin-login-success") {
+        setLoginStatus("success");
         // Extract cookies from the message
         if (event.data.cookies) {
           handleLoginSuccess(event.data.cookies);
         }
-      } else if (event.data.type === 'linkedin-login-failed') {
-        setLoginStatus('failed');
-        setError('Login failed. Please try again.');
+      } else if (event.data.type === "linkedin-login-failed") {
+        setLoginStatus("failed");
+        setError("Login failed. Please try again.");
       }
     };
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, []);
 
   const handleLoginSuccess = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      const response = await fetch('/api/linkedin/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/linkedin/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: 'iframe-auth@example.com',
+          email: "iframe-auth@example.com",
           li_at: cookies.li_at,
           li_a: cookies.li_a,
         }),
@@ -107,21 +108,20 @@ export function LinkedInSmartConnect() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to save LinkedIn credentials');
+        throw new Error(result.error || "Failed to save LinkedIn credentials");
       }
 
       setIsConnected(true);
       localStorage.setItem("linkedInCredentials", "true");
       window.dispatchEvent(new Event("linkedInCredentialsChanged"));
-      
+
       setTimeout(() => {
         window.location.reload();
       }, 2000);
-
     } catch (error) {
-      console.error('Error saving cookies:', error);
-      setError('Failed to save login credentials. Please try manual input.');
-      setLoginStatus('failed');
+      console.error("Error saving cookies:", error);
+      setError("Failed to save login credentials. Please try manual input.");
+      setLoginStatus("failed");
     }
   };
 
@@ -146,11 +146,14 @@ export function LinkedInSmartConnect() {
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
             <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
             </svg>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            Connect Your <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">LinkedIn</span>
+            Connect Your{" "}
+            <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+              LinkedIn
+            </span>
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Paste your LinkedIn cookies to connect your account
@@ -225,7 +228,9 @@ export function LinkedInSmartConnect() {
                   )}
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">Additional authentication cookie (optional)</p>
+              <p className="text-xs text-gray-500 mt-2">
+                Additional authentication cookie (optional)
+              </p>
             </div>
 
             {error && (
@@ -277,11 +282,14 @@ export function LinkedInSmartConnect() {
       <div className="text-center mb-8">
         <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
           <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
           </svg>
         </div>
         <h1 className="text-4xl font-bold text-gray-900 mb-3">
-          Connect Your <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">LinkedIn</span>
+          Connect Your{" "}
+          <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+            LinkedIn
+          </span>
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
           Log in directly to LinkedIn through our secure flow.
@@ -353,7 +361,7 @@ export function LinkedInSmartConnect() {
               </button>
             </div>
             <div className="flex-1 p-4">
-              {loginStatus === 'logging-in' && (
+              {loginStatus === "logging-in" && (
                 <div className="h-full flex items-center justify-center">
                   <div className="text-center">
                     <LoadingSpinner size="lg" color="primary" />
@@ -392,4 +400,4 @@ export function LinkedInSmartConnect() {
       )}
     </div>
   );
-} 
+}

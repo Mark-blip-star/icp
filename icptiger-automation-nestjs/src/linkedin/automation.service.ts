@@ -12,7 +12,7 @@ export class LinkedInAutomationService {
   constructor(
     private sessionService: SessionService,
     private supabaseService: SupabaseService,
-    private linkedinSettingsService: LinkedInSettingsService
+    private linkedinSettingsService: LinkedInSettingsService,
   ) {}
 
   /**
@@ -26,16 +26,18 @@ export class LinkedInAutomationService {
       page: Page;
       campaign: Campaign;
       accountData: LinkedInAccount;
-    }) => Promise<T>
+    }) => Promise<T>,
   ): Promise<T> {
     const userId = campaign.user_id;
-    
-    this.logger.log(`Starting LinkedIn automation for user ${userId}, campaign ${campaign.id}`);
+
+    this.logger.log(
+      `Starting LinkedIn automation for user ${userId}, campaign ${campaign.id}`,
+    );
 
     try {
       // Get or create browser session
       let session = await this.sessionService.getSession(userId);
-    
+
       if (!session) {
         this.logger.log(`Creating new browser session for user ${userId}`);
         session = await this.sessionService.createSession(userId);
@@ -46,21 +48,26 @@ export class LinkedInAutomationService {
 
       // Verify session is healthy
       if (!session.browser || !session.page || session.page.isClosed()) {
-        this.logger.warn(`Session unhealthy for user ${userId}, creating new one`);
+        this.logger.warn(
+          `Session unhealthy for user ${userId}, creating new one`,
+        );
         await this.sessionService.closeSession(userId);
         session = await this.sessionService.createSession(userId);
       }
 
       // Check if already logged in to LinkedIn
       const currentUrl = session.page.url();
-      const isLoggedIn = currentUrl.includes('/feed') || 
-                        currentUrl.includes('/mynetwork') || 
-                        currentUrl.includes('/jobs');
+      const isLoggedIn =
+        currentUrl.includes('/feed') ||
+        currentUrl.includes('/mynetwork') ||
+        currentUrl.includes('/jobs');
 
       if (isLoggedIn) {
         this.logger.log(`User ${userId} already logged in to LinkedIn`);
       } else {
-        this.logger.log(`User ${userId} not logged in, waiting for manual login`);
+        this.logger.log(
+          `User ${userId} not logged in, waiting for manual login`,
+        );
       }
 
       // Log activity
@@ -93,7 +100,6 @@ export class LinkedInAutomationService {
 
       this.logger.log(`Automation completed successfully for user ${userId}`);
       return result;
-
     } catch (error) {
       this.logger.error(`Automation failed for user ${userId}:`, error);
 
@@ -140,6 +146,10 @@ export class LinkedInAutomationService {
     this.sessionService.setLoginSuccessCallback(userId, callback);
   }
 
+  setScreenshotUpdateCallback(userId: string, callback: () => void): void {
+    this.sessionService.setScreenshotUpdateCallback(userId, callback);
+  }
+
   /**
    * Close session for user
    */
@@ -153,12 +163,16 @@ export class LinkedInAutomationService {
   async handlePageNavigation(userId: string, url: string): Promise<boolean> {
     const session = await this.sessionService.getSession(userId);
     if (!session) return false;
-    
-    if (url.includes('/feed') || url.includes('/mynetwork') || url.includes('/jobs')) {
+
+    if (
+      url.includes('/feed') ||
+      url.includes('/mynetwork') ||
+      url.includes('/jobs')
+    ) {
       this.logger.log(`User ${userId} successfully logged in to LinkedIn`);
       return true;
     }
-    
+
     return false;
   }
 
@@ -166,8 +180,7 @@ export class LinkedInAutomationService {
    * Verify LinkedIn account credentials are valid
    */
   async verifyLinkedInAccount(userId: string): Promise<LinkedInAccount> {
-    const account = await this.supabaseService
-      .getLinkedInAccount(userId);
+    const account = await this.supabaseService.getLinkedInAccount(userId);
 
     if (!account) {
       throw new Error(`LinkedIn account not found for user: ${userId}`);
@@ -185,22 +198,30 @@ export class LinkedInAutomationService {
   /**
    * Test LinkedIn connection
    */
-  async testLinkedInConnection(userId: string): Promise<{ success: boolean; message: string }> {
+  async testLinkedInConnection(
+    userId: string,
+  ): Promise<{ success: boolean; message: string }> {
     try {
       const account = await this.verifyLinkedInAccount(userId);
-      
+
       this.logger.log(`LinkedIn account verified for user ${userId}`);
-      
+
       return {
         success: true,
-        message: 'LinkedIn account is connected and active'
+        message: 'LinkedIn account is connected and active',
       };
     } catch (error) {
-      this.logger.error(`LinkedIn connection test failed for user ${userId}:`, error);
-      
+      this.logger.error(
+        `LinkedIn connection test failed for user ${userId}:`,
+        error,
+      );
+
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'LinkedIn connection test failed'
+        message:
+          error instanceof Error
+            ? error.message
+            : 'LinkedIn connection test failed',
       };
     }
   }
@@ -208,7 +229,13 @@ export class LinkedInAutomationService {
   /**
    * Log automation activity
    */
-  async logActivity(userId: string, campaignId: string, message: string, logLevel: 'info' | 'error' = 'info', context?: any): Promise<void> {
+  async logActivity(
+    userId: string,
+    campaignId: string,
+    message: string,
+    logLevel: 'info' | 'error' = 'info',
+    context?: any,
+  ): Promise<void> {
     try {
       await this.supabaseService.logActivity({
         user_id: userId,
@@ -240,7 +267,15 @@ export class LinkedInAutomationService {
   /**
    * Check if user has remaining quota
    */
-  async hasRemainingQuota(userId: string, actionType: 'connections' | 'messages' | 'visits' | 'inmails', requestedCount: number = 1): Promise<boolean> {
-    return this.linkedinSettingsService.hasRemainingQuota(userId, actionType, requestedCount);
+  async hasRemainingQuota(
+    userId: string,
+    actionType: 'connections' | 'messages' | 'visits' | 'inmails',
+    requestedCount: number = 1,
+  ): Promise<boolean> {
+    return this.linkedinSettingsService.hasRemainingQuota(
+      userId,
+      actionType,
+      requestedCount,
+    );
   }
-} 
+}

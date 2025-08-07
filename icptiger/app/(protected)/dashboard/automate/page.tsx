@@ -80,8 +80,9 @@ interface RecentActivityProps {
 
 export default function LinkedInAutomationPage() {
   const router = useRouter();
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const isDemo = searchParams?.get('demo') === '1';
+  const searchParams =
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const isDemo = searchParams?.get("demo") === "1";
   const leftColumnRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -127,25 +128,28 @@ export default function LinkedInAutomationPage() {
   const supabase = createClient();
   const user = useUser();
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
-  const [trialStatus, setTrialStatus] = useState<{ daysRemaining: number; isLoading: boolean }>({ daysRemaining: 0, isLoading: true });
-  
+  const [trialStatus, setTrialStatus] = useState<{ daysRemaining: number; isLoading: boolean }>({
+    daysRemaining: 0,
+    isLoading: true,
+  });
+
   // Use real-time context
-  const { 
-    campaigns, 
-    updateCampaigns, 
-    metrics, 
-    activities, 
+  const {
+    campaigns,
+    updateCampaigns,
+    metrics,
+    activities,
     isConnected,
     refreshCampaigns,
     refreshMetrics,
-    refreshActivities
+    refreshActivities,
   } = useRealtime();
 
   // New: Hydrate all dashboard state from /api/dashboard-init
   useEffect(() => {
     let mounted = true;
     let timeoutId: NodeJS.Timeout;
-    
+
     async function fetchDashboardInit() {
       setIsLoading(true);
       try {
@@ -155,7 +159,7 @@ export default function LinkedInAutomationPage() {
         }
         const data = await res.json();
         if (!mounted) return;
-        
+
         updateCampaigns(data.campaigns || []);
         setTrialStatus({ daysRemaining: data.trial?.daysRemaining ?? 0, isLoading: false });
         user.setImportStatus(data.importStatus || { remainingImports: 0 });
@@ -165,7 +169,7 @@ export default function LinkedInAutomationPage() {
       } catch (err) {
         console.error("Dashboard init error:", err);
         if (mounted) {
-          setTrialStatus(prev => ({ ...prev, isLoading: false }));
+          setTrialStatus((prev) => ({ ...prev, isLoading: false }));
           // Set default values on error to prevent white screen
           updateCampaigns([]);
           user.setImportStatus({ remainingImports: 0 });
@@ -182,73 +186,68 @@ export default function LinkedInAutomationPage() {
         }
       }
     }
-    
+
     // Add a timeout fallback to prevent infinite loading
     timeoutId = setTimeout(() => {
       if (mounted && isLoading) {
         console.warn("Dashboard init timeout - forcing load completion");
         setIsLoading(false);
         setHasLoaded(true);
-        setTrialStatus(prev => ({ ...prev, isLoading: false }));
+        setTrialStatus((prev) => ({ ...prev, isLoading: false }));
         updateCampaigns([]);
         user.setImportStatus({ remainingImports: 0 });
         // DO NOT setHasCredentials(false) here!
       }
     }, 10000); // 10 second timeout
-    
+
     fetchDashboardInit();
-    
-    return () => { 
+
+    return () => {
       mounted = false;
       clearTimeout(timeoutId);
     };
   }, []);
 
   const handleToggleCampaign = async (id: string, status?: string, startDate?: string) => {
-  if (!status || !startDate) {
-    toast.error("Unable to update campaign: missing status or start date.");
-    console.error("handleToggleCampaign called without status or startDate", { id, status, startDate });
-    return;
-  }
-  const now = new Date();
-  const start = new Date(startDate);
-  const numericId = Number(id);
-
-  const newStatus: "queued" | "active" | "paused" | "completed" =
-    status === "paused"
-      ? now >= start
-        ? "active"
-        : "queued"
-      : "paused";
-
-  // 1) update UI immediately
-  updateCampaigns(
-    campaigns.map(c => (c.id === numericId ? { ...c, status: newStatus } : c))
-  );
-
-  try {
-    // 2) hit the API
-    const res = await fetch(`/api/campaigns/${id}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
-    });
-    if (!res.ok) throw new Error();
-
-    toast.success(`Campaign ${newStatus} successfully!`);
-    // 3) Re-fetch campaigns to ensure UI is in sync
-    if (!isDemo) {
-      refreshCampaigns();
+    if (!status || !startDate) {
+      toast.error("Unable to update campaign: missing status or start date.");
+      console.error("handleToggleCampaign called without status or startDate", {
+        id,
+        status,
+        startDate,
+      });
+      return;
     }
-  } catch {
-    // 4) revert on failure
-    updateCampaigns(
-      campaigns.map(c => (c.id === numericId ? { ...c, status } : c))
-    );
-    toast.error("Failed to update campaign status.");
-  }
-};
+    const now = new Date();
+    const start = new Date(startDate);
+    const numericId = Number(id);
 
+    const newStatus: "queued" | "active" | "paused" | "completed" =
+      status === "paused" ? (now >= start ? "active" : "queued") : "paused";
+
+    // 1) update UI immediately
+    updateCampaigns(campaigns.map((c) => (c.id === numericId ? { ...c, status: newStatus } : c)));
+
+    try {
+      // 2) hit the API
+      const res = await fetch(`/api/campaigns/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error();
+
+      toast.success(`Campaign ${newStatus} successfully!`);
+      // 3) Re-fetch campaigns to ensure UI is in sync
+      if (!isDemo) {
+        refreshCampaigns();
+      }
+    } catch {
+      // 4) revert on failure
+      updateCampaigns(campaigns.map((c) => (c.id === numericId ? { ...c, status } : c)));
+      toast.error("Failed to update campaign status.");
+    }
+  };
 
   const handleStartCampaign = () => {
     setShowNewCampaignModal(true);
@@ -259,7 +258,7 @@ export default function LinkedInAutomationPage() {
       updateCampaigns([
         {
           ...newCampaign,
-          id: campaigns.length ? Math.max(...campaigns.map(c => c.id)) + 1 : 1,
+          id: campaigns.length ? Math.max(...campaigns.map((c) => c.id)) + 1 : 1,
           status: "active",
           sent: 0,
           accepted: 0,
@@ -277,9 +276,9 @@ export default function LinkedInAutomationPage() {
           start_date: newCampaign.startDate ? String(newCampaign.startDate) : "",
           end_date: newCampaign.endDate ? String(newCampaign.endDate) : "",
           searchQuery: newCampaign.searchUrl,
-          trending: 'yes',
+          trending: "yes",
         } as Campaign,
-        ...campaigns
+        ...campaigns,
       ]);
     } else {
       refreshCampaigns();
@@ -396,10 +395,14 @@ export default function LinkedInAutomationPage() {
       pending: 24,
       responseRate: 39.5,
       status: "active",
-      linkedin_url: "https://linkedin.com/search/results/people/?keywords=senior%20software%20engineer%20react%20node",
-      connection_message: "Hi [Name], I'm a tech recruiter and I came across your profile. Your experience with React and Node.js is exactly what we're looking for. Would love to connect and discuss some exciting opportunities!",
-      follow_up_message: "Thanks for connecting! I have a Senior Software Engineer role at a fast-growing fintech company that matches your background perfectly. The role offers competitive compensation, remote work, and great growth opportunities. Would you be open to a quick chat this week?",
-      second_follow_up_message: "I'd love to schedule a brief call to discuss the role in detail and see if it aligns with your career goals. What's your availability this week? The position is urgent and we're moving quickly with interviews.",
+      linkedin_url:
+        "https://linkedin.com/search/results/people/?keywords=senior%20software%20engineer%20react%20node",
+      connection_message:
+        "Hi [Name], I'm a tech recruiter and I came across your profile. Your experience with React and Node.js is exactly what we're looking for. Would love to connect and discuss some exciting opportunities!",
+      follow_up_message:
+        "Thanks for connecting! I have a Senior Software Engineer role at a fast-growing fintech company that matches your background perfectly. The role offers competitive compensation, remote work, and great growth opportunities. Would you be open to a quick chat this week?",
+      second_follow_up_message:
+        "I'd love to schedule a brief call to discuss the role in detail and see if it aligns with your career goals. What's your availability this week? The position is urgent and we're moving quickly with interviews.",
       follow_up_days: 2,
       second_follow_up_days: 5,
       cancelled: 0,
@@ -418,9 +421,12 @@ export default function LinkedInAutomationPage() {
       pending: 18,
       responseRate: 36.3,
       status: "completed",
-      linkedin_url: "https://linkedin.com/search/results/people/?keywords=product%20manager%20startup",
-      connection_message: "Hi! I'm recruiting for exciting PM roles at growing startups. Your experience looks perfect!",
-      follow_up_message: "Thanks for connecting! I have a great PM opportunity that matches your background.",
+      linkedin_url:
+        "https://linkedin.com/search/results/people/?keywords=product%20manager%20startup",
+      connection_message:
+        "Hi! I'm recruiting for exciting PM roles at growing startups. Your experience looks perfect!",
+      follow_up_message:
+        "Thanks for connecting! I have a great PM opportunity that matches your background.",
       second_follow_up_message: "Let me know if you're open to a quick call to discuss the role!",
       follow_up_days: 2,
       second_follow_up_days: 5,
@@ -441,7 +447,8 @@ export default function LinkedInAutomationPage() {
       responseRate: 37.5,
       status: "paused",
       linkedin_url: "https://linkedin.com/search/results/people/?keywords=data%20scientist%20ai",
-      connection_message: "Hi! I'm recruiting for AI/ML roles and your background caught my attention.",
+      connection_message:
+        "Hi! I'm recruiting for AI/ML roles and your background caught my attention.",
       follow_up_message: "Thanks for connecting! I have some exciting data science opportunities.",
       second_follow_up_message: "Would you be interested in learning more about the role?",
       follow_up_days: 3,
@@ -462,8 +469,10 @@ export default function LinkedInAutomationPage() {
       pending: 22,
       responseRate: 35.0,
       status: "completed",
-      linkedin_url: "https://linkedin.com/search/results/people/?keywords=sales%20director%20enterprise",
-      connection_message: "Hi! I'm recruiting for senior sales leadership roles in enterprise SaaS.",
+      linkedin_url:
+        "https://linkedin.com/search/results/people/?keywords=sales%20director%20enterprise",
+      connection_message:
+        "Hi! I'm recruiting for senior sales leadership roles in enterprise SaaS.",
       follow_up_message: "Thanks for connecting! I have a great Sales Director opportunity.",
       second_follow_up_message: "Let me know if you're open to a quick call!",
       follow_up_days: 2,
@@ -484,8 +493,10 @@ export default function LinkedInAutomationPage() {
       pending: 14,
       responseRate: 36.7,
       status: "completed",
-      linkedin_url: "https://linkedin.com/search/results/people/?keywords=devops%20engineer%20remote",
-      connection_message: "Hi! I'm recruiting for remote DevOps roles and your experience looks great!",
+      linkedin_url:
+        "https://linkedin.com/search/results/people/?keywords=devops%20engineer%20remote",
+      connection_message:
+        "Hi! I'm recruiting for remote DevOps roles and your experience looks great!",
       follow_up_message: "Thanks for connecting! I have some exciting remote DevOps opportunities.",
       second_follow_up_message: "Would you be interested in learning more?",
       follow_up_days: 2,
@@ -528,8 +539,10 @@ export default function LinkedInAutomationPage() {
       pending: 15,
       responseRate: 44,
       status: "active",
-      linkedin_url: "https://linkedin.com/search/results/people/?keywords=ai%20product%20manager%20remote",
-      connection_message: "Hi! I'm recruiting for remote AI PM roles and your experience looks great!",
+      linkedin_url:
+        "https://linkedin.com/search/results/people/?keywords=ai%20product%20manager%20remote",
+      connection_message:
+        "Hi! I'm recruiting for remote AI PM roles and your experience looks great!",
       follow_up_message: "Thanks for connecting! I have some exciting AI product opportunities.",
       second_follow_up_message: "Would you be interested in learning more?",
       follow_up_days: 2,
@@ -550,7 +563,8 @@ export default function LinkedInAutomationPage() {
       pending: 20,
       responseRate: 52,
       status: "completed",
-      linkedin_url: "https://linkedin.com/search/results/people/?keywords=cloud%20architect%20fortune%20500",
+      linkedin_url:
+        "https://linkedin.com/search/results/people/?keywords=cloud%20architect%20fortune%20500",
       connection_message: "Hi! I'm recruiting for cloud architect roles at Fortune 500 companies.",
       follow_up_message: "Thanks for connecting! I have a great cloud architect opportunity.",
       second_follow_up_message: "Let me know if you're open to a quick call!",
@@ -572,9 +586,11 @@ export default function LinkedInAutomationPage() {
       pending: 25,
       responseRate: 46,
       status: "paused",
-      linkedin_url: "https://linkedin.com/search/results/people/?keywords=marketing%20director%20ecommerce",
+      linkedin_url:
+        "https://linkedin.com/search/results/people/?keywords=marketing%20director%20ecommerce",
       connection_message: "Hi! I'm recruiting for senior marketing roles in e-commerce.",
-      follow_up_message: "Thanks for connecting! I have some great marketing leadership opportunities.",
+      follow_up_message:
+        "Thanks for connecting! I have some great marketing leadership opportunities.",
       second_follow_up_message: "Let me know if you're open to a quick call!",
       follow_up_days: 2,
       second_follow_up_days: 5,
@@ -594,9 +610,11 @@ export default function LinkedInAutomationPage() {
       pending: 12,
       responseRate: 45,
       status: "active",
-      linkedin_url: "https://linkedin.com/search/results/people/?keywords=data%20engineer%20fintech%20startup",
+      linkedin_url:
+        "https://linkedin.com/search/results/people/?keywords=data%20engineer%20fintech%20startup",
       connection_message: "Hi! I'm recruiting for data engineering roles at top fintech startups.",
-      follow_up_message: "Thanks for connecting! I have some exciting data engineering opportunities.",
+      follow_up_message:
+        "Thanks for connecting! I have some exciting data engineering opportunities.",
       second_follow_up_message: "Would you be interested in learning more?",
       follow_up_days: 3,
       second_follow_up_days: 6,
@@ -713,7 +731,7 @@ export default function LinkedInAutomationPage() {
       weeklyGrowth: 0,
       campaigns: demoCampaigns,
       weeklyData: [0, 0, 0, 0, 0, 0, 0],
-    } as any
+    } as any,
   );
   // Calculate acceptanceRate, responseRate, etc.
   aggregateMetrics.acceptanceRate = 46.1;
@@ -723,20 +741,30 @@ export default function LinkedInAutomationPage() {
   aggregateMetrics.weeklyGrowth = 14;
   aggregateMetrics.weeklyData = [38, 42, 51, 49, 56, 61, 63];
 
-  const campaignMetrics = selectedCampaign ? {
-    totalImported: selectedCampaign.sent,
-    totalSent: selectedCampaign.sent,
-    accepted: selectedCampaign.accepted,
-    pending: selectedCampaign.pending,
-    acceptanceRate: selectedCampaign.sent ? parseFloat(((selectedCampaign.accepted / selectedCampaign.sent) * 100).toFixed(1)) : 0,
-    responseRate: selectedCampaign.sent ? parseFloat(((selectedCampaign.accepted * 0.85 / selectedCampaign.sent) * 100).toFixed(1)) : 0,
-    totalMessages: 38,
-    messageConversionRate: selectedCampaign.sent ? parseFloat(((38 / selectedCampaign.sent) * 100).toFixed(1)) : 0,
-    dailyAverage: Math.round(selectedCampaign.sent / 30),
-    weeklyGrowth: Math.round(selectedCampaign.accepted / 8),
-    campaigns: [selectedCampaign],
-    weeklyData: [3, 5, 7, 6, 8, 5, 4],
-  } : aggregateMetrics;
+  const campaignMetrics = selectedCampaign
+    ? {
+        totalImported: selectedCampaign.sent,
+        totalSent: selectedCampaign.sent,
+        accepted: selectedCampaign.accepted,
+        pending: selectedCampaign.pending,
+        acceptanceRate: selectedCampaign.sent
+          ? parseFloat(((selectedCampaign.accepted / selectedCampaign.sent) * 100).toFixed(1))
+          : 0,
+        responseRate: selectedCampaign.sent
+          ? parseFloat(
+              (((selectedCampaign.accepted * 0.85) / selectedCampaign.sent) * 100).toFixed(1),
+            )
+          : 0,
+        totalMessages: 38,
+        messageConversionRate: selectedCampaign.sent
+          ? parseFloat(((38 / selectedCampaign.sent) * 100).toFixed(1))
+          : 0,
+        dailyAverage: Math.round(selectedCampaign.sent / 30),
+        weeklyGrowth: Math.round(selectedCampaign.accepted / 8),
+        campaigns: [selectedCampaign],
+        weeklyData: [3, 5, 7, 6, 8, 5, 4],
+      }
+    : aggregateMetrics;
 
   // Show loading state if credentials are unknown or loading
   if (hasCredentials === null || isLoading) {
@@ -754,22 +782,25 @@ export default function LinkedInAutomationPage() {
       <div className="h-full flex flex-col bg-gray-50/50 min-h-0 overflow-y-auto">
         <div className="w-full flex flex-col gap-6 min-h-0 h-full">
           {/* Metrics Dashboard */}
-          <div 
+          <div
             className="flex-shrink-0 transform transition-all duration-700 ease-out"
             style={{
               opacity: hasLoaded ? 1 : 0,
-              transform: hasLoaded ? 'translateY(0)' : 'translateY(20px)'
+              transform: hasLoaded ? "translateY(0)" : "translateY(20px)",
             }}
           >
-            <MetricsDashboard metrics={selectedCampaign ? campaignMetrics : aggregateMetrics} isDemo={isDemo} />
+            <MetricsDashboard
+              metrics={selectedCampaign ? campaignMetrics : aggregateMetrics}
+              isDemo={isDemo}
+            />
           </div>
-          
+
           {/* LinkedIn Connection Prompt */}
           <div className="bg-white rounded-2xl border border-black/5 p-8 text-center">
             <div className="max-w-md mx-auto">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -792,11 +823,11 @@ export default function LinkedInAutomationPage() {
         {showLinkedInLogin && (
           <LinkedInIntegratedLogin
             onSuccess={(cookies) => {
-              console.log('LinkedIn connected successfully:', cookies);
+              console.log("LinkedIn connected successfully:", cookies);
               setShowLinkedInLogin(false);
             }}
             onError={(error) => {
-              console.error('LinkedIn connection error:', error);
+              console.error("LinkedIn connection error:", error);
             }}
             onClose={() => setShowLinkedInLogin(false)}
           />
@@ -811,31 +842,34 @@ export default function LinkedInAutomationPage() {
       <div className="h-full flex flex-col bg-gray-50/50 min-h-0 overflow-y-auto">
         <div className="w-full flex flex-col gap-6 min-h-0 h-full">
           {/* Metrics Dashboard */}
-          <div 
+          <div
             className="flex-shrink-0 transform transition-all duration-700 ease-out"
             style={{
               opacity: hasLoaded ? 1 : 0,
-              transform: hasLoaded ? 'translateY(0)' : 'translateY(20px)'
+              transform: hasLoaded ? "translateY(0)" : "translateY(20px)",
             }}
           >
-            <MetricsDashboard metrics={selectedCampaign ? campaignMetrics : aggregateMetrics} isDemo={isDemo} />
+            <MetricsDashboard
+              metrics={selectedCampaign ? campaignMetrics : aggregateMetrics}
+              isDemo={isDemo}
+            />
           </div>
           {/* Main content area */}
-          <div 
+          <div
             className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0 flex-1 h-full transform transition-all duration-700 ease-out"
             style={{
               opacity: hasLoaded ? 1 : 0,
-              transform: hasLoaded ? 'translateY(0)' : 'translateY(30px)',
-              transitionDelay: hasLoaded ? '200ms' : '0ms'
+              transform: hasLoaded ? "translateY(0)" : "translateY(30px)",
+              transitionDelay: hasLoaded ? "200ms" : "0ms",
             }}
           >
             {/* Active Campaigns or Campaign Details */}
-            <div 
+            <div
               className="bg-white rounded-2xl border border-black/5 min-h-0 lg:min-h-[550px] h-full flex flex-col w-full min-w-0 transform transition-all duration-500 ease-out"
               style={{
                 opacity: hasLoaded ? 1 : 0,
-                transform: hasLoaded ? 'scale(1)' : 'scale(0.98)',
-                transitionDelay: hasLoaded ? '300ms' : '0ms'
+                transform: hasLoaded ? "scale(1)" : "scale(0.98)",
+                transitionDelay: hasLoaded ? "300ms" : "0ms",
               }}
             >
               {selectedCampaign ? (
@@ -857,12 +891,12 @@ export default function LinkedInAutomationPage() {
               )}
             </div>
             {/* Recent Activity */}
-            <div 
+            <div
               className="bg-white rounded-2xl border border-black/5 min-h-0 lg:min-h-[550px] h-full flex flex-col w-full min-w-0 transform transition-all duration-500 ease-out"
               style={{
                 opacity: hasLoaded ? 1 : 0,
-                transform: hasLoaded ? 'scale(1)' : 'scale(0.98)',
-                transitionDelay: hasLoaded ? '400ms' : '0ms'
+                transform: hasLoaded ? "scale(1)" : "scale(0.98)",
+                transitionDelay: hasLoaded ? "400ms" : "0ms",
               }}
             >
               <RecentActivity />

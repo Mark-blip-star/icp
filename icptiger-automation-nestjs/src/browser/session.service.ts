@@ -13,6 +13,7 @@ export interface BrowserSessionInfo {
   sessionId: string;
   clientSession?: any; // CDP session for screencast
   onLoginSuccess?: () => void; // Callback for login success
+  onScreenshotUpdate?: () => void; // Callback for screenshot updates
   screencastRunning?: boolean; // Flag to track if screencast is active
 }
 
@@ -23,30 +24,30 @@ export class SessionService {
 
   constructor(
     private puppeteerService: PuppeteerService,
-    private configService: ConfigService
+    private configService: ConfigService,
   ) {}
 
   async createSession(userId: string): Promise<BrowserSessionInfo> {
     try {
       this.logger.log(`Creating browser session for user ${userId}`);
-      
+
       const browser = await this.puppeteerService.launchBrowser();
       const page = await this.puppeteerService.createPage(browser);
-      
+
       browser.on('disconnected', () => {
         console.log(`[${userId}] Browser disconnected unexpectedly`);
       });
-      
+
       browser.on('targetdestroyed', (target) => {
         console.log(`[${userId}] Browser target destroyed:`, target.url());
       });
-      
+
       page.on('close', () => {
         console.log(`[${userId}] Page closed unexpectedly`);
       });
-      
+
       const clientSession = await page.target().createCDPSession();
-      
+
       // Navigate to LinkedIn login page
       await page.goto('https://www.linkedin.com/login', {
         waitUntil: 'networkidle2',
@@ -54,7 +55,7 @@ export class SessionService {
       });
 
       // Wait for page to load naturally
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const sessionId = `${userId}_${Date.now()}`;
       const sessionInfo: BrowserSessionInfo = {
@@ -73,26 +74,58 @@ export class SessionService {
       // Monitor page navigation for login success
       page.on('framenavigated', async (frame) => {
         if (frame !== page.mainFrame()) return;
-        
+
         const url = frame.url();
         console.log(`[${userId}] Navigation: ${url}`);
-        
-        if (url.includes('/feed') || url.includes('/mynetwork') || url.includes('/jobs')) {
+
+        if (
+          url.includes('/feed') ||
+          url.includes('/mynetwork') ||
+          url.includes('/jobs')
+        ) {
           sessionInfo.isLoggedIn = true;
           console.log(`[${userId}] Login success detected: ${url}`);
-          
+
           await this.saveLinkedInCookies(userId, sessionInfo.page);
-          
+
           if (sessionInfo.onLoginSuccess) {
             sessionInfo.onLoginSuccess();
           }
         }
       });
 
+      // Monitor DOM changes for automatic screenshot updates
+      page.on('load', async () => {
+        console.log(`[${userId}] Page loaded, triggering screenshot update`);
+        if (sessionInfo.onScreenshotUpdate) {
+          sessionInfo.onScreenshotUpdate();
+        }
+      });
+
+      page.on('domcontentloaded', async () => {
+        console.log(
+          `[${userId}] DOM content loaded, triggering screenshot update`,
+        );
+        if (sessionInfo.onScreenshotUpdate) {
+          sessionInfo.onScreenshotUpdate();
+        }
+      });
+
+      // Monitor for network idle to catch dynamic content changes
+      page.on('networkidle0', async () => {
+        console.log(`[${userId}] Network idle, triggering screenshot update`);
+        if (sessionInfo.onScreenshotUpdate) {
+          sessionInfo.onScreenshotUpdate();
+        }
+      });
+
       // Auto-cleanup after 20 minutes
-      setTimeout(() => {
-        this.cleanupSession(userId);
-      }, 20 * 60 * 1000);
+      setTimeout(
+        () => {
+          this.cleanupSession(userId);
+        },
+        20 * 60 * 1000,
+      );
 
       this.logger.log(`Browser session created for user ${userId}`);
       return sessionInfo;
@@ -122,11 +155,18 @@ export class SessionService {
     }
   }
 
+  setScreenshotUpdateCallback(userId: string, callback: () => void): void {
+    const session = this.sessions.get(userId);
+    if (session) {
+      session.onScreenshotUpdate = callback;
+    }
+  }
+
   private async saveLinkedInCookies(userId: string, page: Page): Promise<void> {
     try {
       const cookies = await page.cookies();
-      const liAt = cookies.find(c => c.name === 'li_at')?.value;
-      const liA = cookies.find(c => c.name === 'li_a')?.value;
+      const liAt = cookies.find((c) => c.name === 'li_at')?.value;
+      const liA = cookies.find((c) => c.name === 'li_a')?.value;
 
       if (liAt) {
         console.log(`[${userId}] Saving updated LinkedIn cookies to database`);
@@ -134,7 +174,7 @@ export class SessionService {
         if (liA) {
           console.log(`[${userId}] li_a cookie: ${liA.substring(0, 20)}...`);
         }
-        
+
         // TODO: Save cookies to database
         // await this.supabaseService.updateLinkedInCookies(userId, liAt, liA);
       }
@@ -171,7 +211,10 @@ export class SessionService {
       });
       return screenshot as Buffer;
     } catch (error) {
-      this.logger.error(`Failed to capture screenshot for user ${userId}:`, error);
+      this.logger.error(
+        `Failed to capture screenshot for user ${userId}:`,
+        error,
+      );
       return null;
     }
   }
@@ -185,10 +228,13 @@ export class SessionService {
           try {
             await session.clientSession.send('Page.stopScreencast');
           } catch (error) {
-            this.logger.warn(`Error stopping screencast for user ${userId}:`, error);
+            this.logger.warn(
+              `Error stopping screencast for user ${userId}:`,
+              error,
+            );
           }
         }
-        
+
         if (session.browser) {
           await session.browser.close();
         }
@@ -206,7 +252,8 @@ export class SessionService {
 
     const now = new Date();
     const timeoutMs = 20 * 60 * 1000;
-    const isExpired = now.getTime() - session.lastActivity.getTime() > timeoutMs;
+    const isExpired =
+      now.getTime() - session.lastActivity.getTime() > timeoutMs;
 
     if (isExpired) {
       await this.closeSession(userId);
@@ -233,4 +280,4 @@ export class SessionService {
   getSessionCount(): number {
     return this.sessions.size;
   }
-} 
+}

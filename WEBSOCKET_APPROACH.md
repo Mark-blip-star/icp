@@ -38,8 +38,8 @@ icptiger/app/
 
 ```typescript
 // Користувач підключається до WebSocket
-const socket = io('http://localhost:3008', {
-  query: { user_id: userId }
+const socket = io("http://localhost:3008", {
+  query: { user_id: userId },
 });
 
 // Сервер створює браузерну сесію
@@ -51,12 +51,12 @@ const session = await sessionService.createSession(userId);
 ```typescript
 // PuppeteerService запускає Chrome
 const browser = await puppeteer.launch({
-  headless: false,  // Показуємо браузер
-  args: ['--no-sandbox', '--disable-setuid-sandbox']
+  headless: false, // Показуємо браузер
+  args: ["--no-sandbox", "--disable-setuid-sandbox"],
 });
 
 // Навігуємо до LinkedIn
-await page.goto('https://www.linkedin.com/login');
+await page.goto("https://www.linkedin.com/login");
 ```
 
 ### 3. Real-time Screencast
@@ -64,16 +64,16 @@ await page.goto('https://www.linkedin.com/login');
 ```typescript
 // CDP (Chrome DevTools Protocol) screencast
 const cdpSession = await page.target().createCDPSession();
-await cdpSession.send('Page.startScreencast', {
-  format: 'jpeg',
+await cdpSession.send("Page.startScreencast", {
+  format: "jpeg",
   quality: 80,
   maxWidth: 1280,
-  maxHeight: 720
+  maxHeight: 720,
 });
 
 // Відправляємо кадри на фронтенд
-cdpSession.on('Page.screencastFrame', (data) => {
-  client.emit('screencast', data.data);
+cdpSession.on("Page.screencastFrame", (data) => {
+  client.emit("screencast", data.data);
 });
 ```
 
@@ -86,7 +86,7 @@ async handleMouseEvent(event: any, client: Socket) {
   await session.page.mouse.click(event.x, event.y);
 }
 
-// Keyboard events  
+// Keyboard events
 @SubscribeMessage('keyboard')
 async handleKeyboardEvent(event: any, client: Socket) {
   await session.page.keyboard.type(event.key);
@@ -104,21 +104,25 @@ async handleScrollEvent(event: any, client: Socket) {
 ## 🎮 User Experience
 
 ### 1. Connect to Browser
+
 - Користувач натискає "Connect to Browser"
 - Встановлюється WebSocket з'єднання
 - Запускається Chrome на сервері
 
 ### 2. Interactive Session
+
 - Користувач бачить браузер через canvas
 - Може клікати, вводити текст, скролити
 - Всі дії передаються в реальний браузер
 
 ### 3. Manual Login
+
 - Користувач вводить email/пароль вручну
 - Проходить CAPTCHA, верифікацію телефону
 - Обходить всі перевірки безпеки
 
 ### 4. Cookie Extraction
+
 - Після успішного логіну автоматично зберігаються cookies
 - Сесія залишається активною для подальшого використання
 
@@ -133,7 +137,7 @@ HEADLESS=false
 VIEWPORT_WIDTH=1920
 VIEWPORT_HEIGHT=1080
 
-# WebSocket Configuration  
+# WebSocket Configuration
 SOCKET_PORT=3008
 ```
 
@@ -141,15 +145,15 @@ SOCKET_PORT=3008
 
 ```typescript
 const browserOptions = {
-  headless: false,  // Показуємо браузер
+  headless: false, // Показуємо браузер
   args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-accelerated-2d-canvas',
-    '--no-first-run',
-    '--no-zygote',
-    '--disable-gpu',
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-accelerated-2d-canvas",
+    "--no-first-run",
+    "--no-zygote",
+    "--disable-gpu",
   ],
   defaultViewport: {
     width: 1920,
@@ -161,21 +165,25 @@ const browserOptions = {
 ## 🎯 Advantages
 
 ### 1. **Human-like Behavior**
+
 - Користувач сам вводить дані
 - Природні паузи між діями
 - Обхід бот-детекції
 
 ### 2. **Visual Control**
+
 - Бачиш, що відбувається
 - Можеш втрутитися при проблемах
 - Повний контроль над процесом
 
 ### 3. **Flexibility**
+
 - Працює з будь-якими змінами LinkedIn
 - Не залежить від селекторів
 - Адаптується до нових перевірок
 
 ### 4. **Security**
+
 - Дані не передаються через API
 - Користувач сам вводить пароль
 - Більш безпечно для користувача
@@ -213,18 +221,21 @@ npm run dev
 ## 🔍 Technical Details
 
 ### CDP Screencast
+
 - Використовує Chrome DevTools Protocol
 - JPEG формат для швидкої передачі
 - Якість 80% для балансу швидкості/якості
 - Максимальний розмір 1280x720
 
 ### Event Handling
+
 - Mouse: кліки, переміщення
 - Keyboard: введення тексту, спеціальні клавіші
 - Scroll: вертикальна прокрутка
 - Real-time координати
 
 ### Session Management
+
 - Автоматичне очищення через 20 хвилин
 - Збереження cookies після логіну
 - Відстеження активності користувача
@@ -233,16 +244,19 @@ npm run dev
 ## 🛡️ Security Considerations
 
 ### 1. **User Data Protection**
+
 - Паролі не зберігаються
 - Дані не передаються через API
 - Користувач сам контролює процес
 
 ### 2. **Session Security**
+
 - Унікальні сесії для кожного користувача
 - Автоматичне закриття неактивних сесій
 - Ізоляція між користувачами
 
 ### 3. **Network Security**
+
 - WebSocket з'єднання через HTTPS
 - Валідація user_id
 - Обмеження доступу
@@ -250,12 +264,14 @@ npm run dev
 ## 🎨 UI Components
 
 ### LinkedInWebSocketConnect
+
 - Canvas для відображення браузера
 - Кнопки керування сесією
 - Debug інформація
 - Статус підключення
 
 ### Features
+
 - Real-time screencast
 - Interactive canvas
 - Event handling
@@ -268,14 +284,17 @@ npm run dev
 ### Common Issues
 
 1. **Browser not launching**
+
    - Перевірте CHROME_EXECUTABLE_PATH
    - Встановіть Chrome на сервері
 
 2. **Screencast not working**
+
    - Перевірте CDP з'єднання
    - Перезапустіть сесію
 
 3. **Events not responding**
+
    - Перевірте WebSocket з'єднання
    - Перевірте координати подій
 
@@ -286,6 +305,7 @@ npm run dev
 ## 🚀 Future Enhancements
 
 ### Planned Features
+
 - [ ] Multi-user support
 - [ ] Session recording
 - [ ] Advanced event handling
@@ -294,6 +314,7 @@ npm run dev
 - [ ] Better error handling
 
 ### Potential Improvements
+
 - [ ] WebRTC для кращої якості
 - [ ] GPU acceleration
 - [ ] Session persistence
@@ -302,4 +323,4 @@ npm run dev
 
 ---
 
-**Цей підхід надає найбільш гнучкий та безпечний спосіб автоматизації LinkedIn з повним контролем користувача! 🎯** 
+**Цей підхід надає найбільш гнучкий та безпечний спосіб автоматизації LinkedIn з повним контролем користувача! 🎯**

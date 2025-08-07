@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Monitor, X, Globe, MousePointer, Linkedin, CheckCircle } from "lucide-react";
+import { Loader2, Monitor, MousePointer, Keyboard, Scroll, X, Play, Square } from "lucide-react";
 import LinkedInWebSocketConnect from "./linkedin-websocket-connect";
 
 interface LinkedInIntegratedLoginProps {
@@ -14,111 +14,126 @@ interface LinkedInIntegratedLoginProps {
   onClose?: () => void;
 }
 
-export function LinkedInIntegratedLogin({ 
-  onSuccess, 
+export function LinkedInIntegratedLogin({
+  onSuccess,
   onError,
-  onClose 
+  onClose,
 }: LinkedInIntegratedLoginProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cookies, setCookies] = useState<{ li_at?: string; li_a?: string } | null>(null);
   const [showWebSocketMode, setShowWebSocketMode] = useState(false);
-  const [userId, setUserId] = useState<string>('');
+  const [userId, setUserId] = useState<string>("");
+  const [closeSession, setCloseSession] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     // Generate a unique user ID for WebSocket session
-    const storedUserId = localStorage.getItem('linkedin_user_id');
+    const storedUserId = localStorage.getItem("linkedin_user_id");
     if (storedUserId) {
       setUserId(storedUserId);
     } else {
       const newUserId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('linkedin_user_id', newUserId);
+      localStorage.setItem("linkedin_user_id", newUserId);
       setUserId(newUserId);
     }
   }, []);
 
   const handleLoginSuccess = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log('🎉 Login success! Processing cookies...');
-      console.log('📋 li_at cookie:', cookies.li_at ? cookies.li_at.substring(0, 20) + '...' : 'Not found');
-      console.log('📋 li_a cookie:', cookies.li_a ? cookies.li_a.substring(0, 20) + '...' : 'Not found');
-      
+      console.log("🎉 Login success! Processing cookies...");
+      console.log(
+        "📋 li_at cookie:",
+        cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
+      );
+      console.log(
+        "📋 li_a cookie:",
+        cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
+      );
+
       if (cookies.li_at) {
         // Save cookies to backend
         await saveLinkedInCookies(cookies);
-        
+
         // Update status and show cookies
         setIsConnected(true);
         setCookies(cookies);
         localStorage.setItem("linkedInCredentials", "true");
         window.dispatchEvent(new Event("linkedInCredentialsChanged"));
-        
-        console.log('✅ LinkedIn connection completed successfully!');
-        
+
+        console.log("✅ LinkedIn connection completed successfully!");
+
         if (onSuccess) {
           onSuccess(cookies);
         }
-        
+
         // Force refresh the page to update hasCredentials status
         setTimeout(() => {
-          console.log('🔄 Refreshing page to update connection status...');
+          console.log("🔄 Refreshing page to update connection status...");
           window.location.reload();
         }, 2000);
       } else {
-        console.log('❌ No li_at cookie found');
-        setError('No authentication cookies found. Please try logging in again.');
+        console.log("❌ No li_at cookie found");
+        setError("No authentication cookies found. Please try logging in again.");
       }
     } catch (error) {
-      console.error('❌ Error processing login success:', error);
-      setError('Failed to process login credentials. Please try again.');
+      console.error("❌ Error processing login success:", error);
+      setError("Failed to process login credentials. Please try again.");
     }
   };
 
   const saveLinkedInCookies = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log('💾 Saving cookies to backend...');
-      console.log('📤 Sending data to /api/linkedin/connect:', {
-        email: 'websocket_user@example.com',
-        li_at: cookies.li_at ? cookies.li_at.substring(0, 20) + '...' : 'Not found',
-        li_a: cookies.li_a ? cookies.li_a.substring(0, 20) + '...' : 'Not found'
+      console.log("💾 Saving cookies to backend...");
+      console.log("📤 Sending data to /api/linkedin/connect:", {
+        email: "websocket_user@example.com",
+        li_at: cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
+        li_a: cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
       });
-      
-      const response = await fetch('/api/linkedin/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+
+      const response = await fetch("/api/linkedin/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: 'websocket_user@example.com',
+          email: "websocket_user@example.com",
           li_at: cookies.li_at,
           li_a: cookies.li_a,
         }),
       });
 
-      console.log('📡 Connect API response status:', response.status);
+      console.log("📡 Connect API response status:", response.status);
       const result = await response.json();
-      console.log('📡 Connect API response:', result);
+      console.log("📡 Connect API response:", result);
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to save LinkedIn credentials');
+        throw new Error(result.error || "Failed to save LinkedIn credentials");
       }
 
-      console.log('✅ Cookies saved successfully to backend!');
+      console.log("✅ Cookies saved successfully to backend!");
       return result;
     } catch (error) {
-      console.error('❌ Error saving cookies:', error);
+      console.error("❌ Error saving cookies:", error);
       throw error;
     }
   };
 
   const handleWebSocketSuccess = async (cookies: { li_at: string; li_a?: string }) => {
-    console.log('🎉 WebSocket login successful!');
+    console.log("🎉 WebSocket login successful!");
     await handleLoginSuccess(cookies as { li_at?: string; li_a?: string });
   };
 
   const handleWebSocketError = (error: string) => {
-    console.error('❌ WebSocket error:', error);
-    setError(`WebSocket error: ${error}`);
-    if (onError) {
-      onError(error);
+    console.error("WebSocket error:", error);
+    setError(error);
+  };
+
+  const handleCloseModal = () => {
+    // Закриваємо сесію Puppeteer при закритті модального вікна
+    if (closeSession) {
+      closeSession();
+    }
+
+    if (onClose) {
+      onClose();
     }
   };
 
@@ -127,47 +142,41 @@ export function LinkedInIntegratedLogin({
     setError(null);
   };
 
-  // Show WebSocket mode
+  // Show WebSocket mode (інтерактивний браузер)
   if (showWebSocketMode) {
     return (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-1">
-          <div className="bg-white rounded-2xl w-full h-full max-w-[98vw] max-h-[98vh] overflow-hidden flex flex-col">
-            <div className="p-3 border-b border-gray-200 flex-shrink-0">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-1">
+        <div className="bg-white rounded-2xl w-full h-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
+          <div className="p-3 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  Interactive LinkedIn Login
-                </h2>
+                <h2 className="text-xl font-bold text-gray-900">LinkedIn Login</h2>
                 <p className="text-gray-600 mt-1">
-                  Use the interactive browser to log in to LinkedIn manually
+                  Use the browser to log in to your LinkedIn account
                 </p>
               </div>
               <div className="flex gap-2">
-                <Button 
-                  onClick={handleBackToNormal}
-                  variant="outline"
-                  size="sm"
-                >
-                  ← Back
-                </Button>
                 {onClose && (
-                  <Button 
-                    onClick={onClose}
-                    variant="outline"
+                  <Button
+                    onClick={handleCloseModal}
+                    variant="ghost"
                     size="sm"
+                    className="h-10 w-10 p-0 rounded-full hover:bg-gray-100"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-5 w-5" />
                   </Button>
                 )}
               </div>
             </div>
           </div>
-          
-                      <div className="flex-1 overflow-auto p-2">
+
+          <div className="flex-1 overflow-auto p-2">
             <LinkedInWebSocketConnect
               userId={userId}
               onSuccess={handleWebSocketSuccess}
               onError={handleWebSocketError}
+              onClose={handleCloseModal}
+              setCloseSession={setCloseSession}
             />
           </div>
         </div>
@@ -182,14 +191,12 @@ export function LinkedInIntegratedLogin({
         <div className="p-6">
           <div className="text-center mb-6">
             <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
-              <Linkedin className="w-6 h-6 text-blue-600" />
+              <svg className="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+              </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">
-              Connect LinkedIn Account
-            </h2>
-            <p className="text-gray-600 text-sm">
-              Use interactive browser to log in securely
-            </p>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Connect LinkedIn Account</h2>
+            <p className="text-gray-600 text-sm">Use interactive browser to log in securely</p>
           </div>
 
           {/* WebSocket Login Card */}
@@ -203,15 +210,21 @@ export function LinkedInIntegratedLogin({
                     <p>See and control the browser directly</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3 text-sm text-gray-600">
-                  <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <svg
+                    className="h-4 w-4 mt-0.5 flex-shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   <div>
                     <p className="font-medium text-gray-700">Bypass Security</p>
                     <p>Handle CAPTCHA and verification manually</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3 text-sm text-gray-600">
                   <Monitor className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div>
@@ -224,7 +237,9 @@ export function LinkedInIntegratedLogin({
                   onClick={() => setShowWebSocketMode(true)}
                   className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                 >
-                  <Globe className="h-4 w-4" />
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                  </svg>
                   Start Interactive Login
                 </Button>
               </div>
@@ -242,7 +257,9 @@ export function LinkedInIntegratedLogin({
           {/* Success Display */}
           {isConnected && cookies && (
             <Alert className="mt-4 border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
+              <svg className="h-4 w-4 text-green-600" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <AlertDescription className="text-green-800">
                 LinkedIn connected successfully! Redirecting...
               </AlertDescription>
@@ -252,11 +269,7 @@ export function LinkedInIntegratedLogin({
           {/* Close button */}
           {onClose && (
             <div className="mt-4 text-center">
-              <Button 
-                onClick={onClose}
-                variant="ghost"
-                size="sm"
-              >
+              <Button onClick={onClose} variant="ghost" size="sm">
                 Cancel
               </Button>
             </div>
@@ -265,4 +278,4 @@ export function LinkedInIntegratedLogin({
       </div>
     </div>
   );
-} 
+}
