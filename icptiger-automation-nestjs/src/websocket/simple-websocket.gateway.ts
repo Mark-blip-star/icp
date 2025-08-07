@@ -239,6 +239,9 @@ export class SimpleWebsocketGateway
             await session.page.mouse.click(event.x, event.y);
             console.log(`[${userId}] ✅ SUCCESS: Mouse clicked at (${event.x}, ${event.y})`);
             
+            // Force screenshot update after click
+            await this.forceScreenshotUpdate(userId, client, session.page);
+            
             // Send input update after click to show current state
             await this.sendInputUpdate(userId, client, session.page);
             
@@ -496,6 +499,9 @@ export class SimpleWebsocketGateway
             // Wait a bit for the deletion to complete
             await new Promise(resolve => setTimeout(resolve, 50));
           }
+          
+          // Force screenshot update after keyboard event
+          await this.forceScreenshotUpdate(userId, client, session.page);
           
           // Send input update after keyboard event
           await this.sendInputUpdate(userId, client, session.page);
@@ -910,6 +916,31 @@ export class SimpleWebsocketGateway
       }
     } catch (error) {
       console.log(`[${userId}] Error sending input update:`, error.message);
+    }
+  }
+
+  private async forceScreenshotUpdate(userId: string, client: Socket, page: any): Promise<void> {
+    try {
+      console.log(`[${userId}] Forcing screenshot update...`);
+      
+      // Take a manual screenshot and send it
+      const screenshot = await page.screenshot({
+        type: 'jpeg',
+        quality: 80,
+        fullPage: false
+      });
+      
+      const base64Image = screenshot.toString('base64');
+      const dataUrl = `data:image/jpeg;base64,${base64Image}`;
+      
+      client.emit('screencast', {
+        data: dataUrl,
+        timestamp: Date.now()
+      });
+      
+      console.log(`[${userId}] ✅ Screenshot update sent`);
+    } catch (error) {
+      console.error(`[${userId}] Error forcing screenshot update:`, error);
     }
   }
 } 
