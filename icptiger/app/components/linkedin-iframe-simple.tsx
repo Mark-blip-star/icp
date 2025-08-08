@@ -26,7 +26,7 @@ export function LinkedInIframeSimple() {
     // Check if iframe works after a short delay
     setTimeout(() => {
       if (iframeRef.current && !iframeRef.current.contentDocument) {
-        console.log("❌ Iframe approach failed, trying popup approach");
+        // console.log("❌ Iframe approach failed, trying popup approach");
         setShowIframe(false);
         setError("Iframe blocked by browser. Trying popup method...");
 
@@ -37,7 +37,7 @@ export function LinkedInIframeSimple() {
           "width=600,height=800,left=100,top=100",
         );
         if (popup) {
-          console.log("🔄 Opened LinkedIn in popup window");
+          // console.log("🔄 Opened LinkedIn in popup window");
           popupRef.current = popup;
           setUsePopup(true);
           startPopupLoginCheck(popup);
@@ -52,15 +52,15 @@ export function LinkedInIframeSimple() {
 
   const handleLoginSuccess = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log("🎉 Login success! Processing cookies...");
-      console.log(
-        "📋 li_at cookie:",
-        cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
-      );
-      console.log(
-        "📋 li_a cookie:",
-        cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
-      );
+      // console.log("🎉 Login success! Processing cookies...");
+      // console.log(
+      //   "📋 li_at cookie:",
+      //   cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
+      // );
+      // console.log(
+      //   "📋 li_a cookie:",
+      //   cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
+      // );
 
       if (cookies.li_at) {
         // Save cookies to backend
@@ -74,14 +74,14 @@ export function LinkedInIframeSimple() {
         localStorage.setItem("linkedInCredentials", "true");
         window.dispatchEvent(new Event("linkedInCredentialsChanged"));
 
-        console.log("✅ LinkedIn connection completed successfully!");
+        // console.log("✅ LinkedIn connection completed successfully!");
 
         // Redirect after success
         setTimeout(() => {
           window.location.reload();
         }, 2000);
       } else {
-        console.log("❌ No li_at cookie found");
+        // console.log("❌ No li_at cookie found");
         setError("No authentication cookies found. Please try logging in again.");
         setLoginStatus("failed");
       }
@@ -94,7 +94,7 @@ export function LinkedInIframeSimple() {
 
   const saveLinkedInCookies = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log("💾 Saving cookies to backend...");
+      // console.log("💾 Saving cookies to backend...");
       const response = await fetch("/api/linkedin/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,7 +111,7 @@ export function LinkedInIframeSimple() {
         throw new Error(result.error || "Failed to save LinkedIn credentials");
       }
 
-      console.log("✅ Cookies saved successfully to backend!");
+      // console.log("✅ Cookies saved successfully to backend!");
       return result;
     } catch (error) {
       console.error("❌ Error saving cookies:", error);
@@ -128,12 +128,12 @@ export function LinkedInIframeSimple() {
   };
 
   const startPopupLoginCheck = (popup: Window) => {
-    console.log("🔍 Starting popup login check...");
+    // console.log("🔍 Starting popup login check...");
 
     const checkInterval = setInterval(() => {
       try {
         if (popup.closed) {
-          console.log("❌ Popup was closed by user");
+          // console.log("❌ Popup was closed by user");
           clearInterval(checkInterval);
           setUsePopup(false);
           setLoginStatus("idle");
@@ -141,7 +141,7 @@ export function LinkedInIframeSimple() {
         }
 
         const currentUrl = popup.location.href;
-        console.log("🔍 Current popup URL:", currentUrl);
+        // console.log("🔍 Current popup URL:", currentUrl);
 
         // Check if user is logged in
         const loginPatterns = [
@@ -162,14 +162,14 @@ export function LinkedInIframeSimple() {
         const isLoggedIn = loginPatterns.some((pattern) => currentUrl.includes(pattern));
 
         if (isLoggedIn) {
-          console.log("✅ Login detected in popup! URL:", currentUrl);
+          // console.log("✅ Login detected in popup! URL:", currentUrl);
           clearInterval(checkInterval);
 
           // Extract cookies from popup
           extractCookiesFromPopup(popup);
         }
       } catch (error) {
-        console.log("🔄 CORS error checking popup URL, continuing...");
+        // console.log("🔄 CORS error checking popup URL, continuing...");
       }
     }, 2000);
 
@@ -177,7 +177,7 @@ export function LinkedInIframeSimple() {
     setTimeout(() => {
       clearInterval(checkInterval);
       if (!popup.closed) {
-        console.log("⏰ Popup login check timeout");
+        // console.log("⏰ Popup login check timeout");
         setError("Login timeout. Please try again.");
       }
     }, 300000);
@@ -185,30 +185,30 @@ export function LinkedInIframeSimple() {
 
   const extractCookiesFromPopup = (popup: Window) => {
     try {
-      console.log("🍪 Extracting cookies from popup...");
+      // console.log("🍪 Extracting cookies from popup...");
 
       // Inject script to extract cookies
       const script = popup.document.createElement("script");
       script.textContent = `
         try {
           const cookies = document.cookie;
-          console.log('📋 All cookies in popup:', cookies);
+          // console.log('📋 All cookies in popup:', cookies);
           
           const liAt = cookies.split(';').find(c => c.trim().startsWith('li_at='))?.split('=')[1];
           const liA = cookies.split(';').find(c => c.trim().startsWith('li_a='))?.split('=')[1];
           
-          console.log('🍪 li_at found in popup:', !!liAt);
-          console.log('🍪 li_a found in popup:', !!liA);
+          // console.log('🍪 li_at found in popup:', !!liAt);
+          // console.log('🍪 li_a found in popup:', !!liA);
           
           if (liAt) {
-            console.log('✅ Authentication cookies found in popup!');
+            // console.log('✅ Authentication cookies found in popup!');
             window.opener.postMessage({
               type: 'linkedin-login-success',
               cookies: { li_at: liAt, li_a: liA },
               url: window.location.href
             }, '*');
           } else {
-            console.log('❌ No authentication cookies found in popup');
+            // console.log('❌ No authentication cookies found in popup');
             window.opener.postMessage({
               type: 'linkedin-login-no-cookies',
               url: window.location.href
@@ -224,9 +224,9 @@ export function LinkedInIframeSimple() {
       `;
 
       popup.document.head.appendChild(script);
-      console.log("✅ Cookie extraction script injected into popup");
+      // console.log("✅ Cookie extraction script injected into popup");
     } catch (error) {
-      console.log("❌ Could not inject script into popup:", error);
+      // console.log("❌ Could not inject script into popup:", error);
       setError("Could not extract cookies from popup. Please try again.");
     }
   };
@@ -235,8 +235,8 @@ export function LinkedInIframeSimple() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === "linkedin-login-success") {
-        console.log("✅ Login success detected via message:", event.data.url);
-        console.log("📨 Received cookies:", event.data.cookies);
+        // console.log("✅ Login success detected via message:", event.data.url);
+        // console.log("📨 Received cookies:", event.data.cookies);
         setLoginStatus("success");
         handleLoginSuccess(event.data.cookies);
 
@@ -245,11 +245,11 @@ export function LinkedInIframeSimple() {
           popupRef.current.close();
         }
       } else if (event.data.type === "linkedin-login-no-cookies") {
-        console.log("❌ Login detected but no cookies found:", event.data.url);
+        // console.log("❌ Login detected but no cookies found:", event.data.url);
         setError("Login successful but no authentication cookies found. Please try again.");
         setLoginStatus("failed");
       } else if (event.data.type === "linkedin-login-error") {
-        console.log("❌ Error during login process:", event.data.error);
+        // console.log("❌ Error during login process:", event.data.error);
         setError(`Login error: ${event.data.error}. Please try again.`);
         setLoginStatus("failed");
       }
@@ -267,11 +267,11 @@ export function LinkedInIframeSimple() {
 
     const handleIframeLoad = () => {
       try {
-        console.log("🔧 Injecting login detector script into iframe...");
+        // console.log("🔧 Injecting login detector script into iframe...");
 
         // Check if we can access the iframe content
         if (!iframe.contentDocument) {
-          console.log("❌ Cannot access iframe content - CORS restriction");
+          // console.log("❌ Cannot access iframe content - CORS restriction");
           setError(
             "LinkedIn login page cannot be loaded in this browser. Please try using a different browser or disable browser extensions.",
           );
@@ -281,11 +281,11 @@ export function LinkedInIframeSimple() {
         const script = iframe.contentDocument?.createElement("script");
         if (script) {
           script.textContent = `
-            console.log('🔍 LinkedIn login detector started in iframe');
+            // console.log('🔍 LinkedIn login detector started in iframe');
             
             function checkForLogin() {
               const currentUrl = window.location.href;
-              console.log('🔍 Current iframe URL:', currentUrl);
+              // console.log('🔍 Current iframe URL:', currentUrl);
               
               // Check if user is logged in
               const loginPatterns = [
@@ -306,24 +306,24 @@ export function LinkedInIframeSimple() {
               const isLoggedIn = loginPatterns.some(pattern => currentUrl.includes(pattern));
               
               if (isLoggedIn) {
-                console.log('✅ Login detected in iframe! URL:', currentUrl);
+                // console.log('✅ Login detected in iframe! URL:', currentUrl);
                 
                 // Wait a bit for cookies to be set
                 setTimeout(() => {
                   const cookies = document.cookie;
-                  console.log('📋 All cookies in iframe:', cookies);
+                  // console.log('📋 All cookies in iframe:', cookies);
                   
                   const liAt = cookies.split(';').find(c => c.trim().startsWith('li_at='))?.split('=')[1];
                   const liA = cookies.split(';').find(c => c.trim().startsWith('li_a='))?.split('=')[1];
                   
-                  console.log('🍪 li_at found in iframe:', !!liAt);
-                  console.log('🍪 li_a found in iframe:', !!liA);
+                  // console.log('🍪 li_at found in iframe:', !!liAt);
+                  // console.log('🍪 li_a found in iframe:', !!liA);
                   
                   if (liAt) {
-                    console.log('✅ Authentication cookies found in iframe!');
-                    console.log('📋 li_at cookie (first 20 chars):', liAt.substring(0, 20) + '...');
+                    // console.log('✅ Authentication cookies found in iframe!');
+                    // console.log('📋 li_at cookie (first 20 chars):', liAt.substring(0, 20) + '...');
                     if (liA) {
-                      console.log('📋 li_a cookie (first 20 chars):', liA.substring(0, 20) + '...');
+                      // console.log('📋 li_a cookie (first 20 chars):', liA.substring(0, 20) + '...');
                     }
                     
                     // Send cookies back to parent window
@@ -333,7 +333,7 @@ export function LinkedInIframeSimple() {
                       url: currentUrl
                     }, '*');
                   } else {
-                    console.log('❌ No authentication cookies found in iframe');
+                    // console.log('❌ No authentication cookies found in iframe');
                     window.parent.postMessage({
                       type: 'linkedin-login-no-cookies',
                       url: currentUrl
@@ -359,16 +359,16 @@ export function LinkedInIframeSimple() {
               // Stop checking after 5 minutes
               setTimeout(() => {
                 clearInterval(interval);
-                console.log('⏰ Login detection timeout in iframe');
+                // console.log('⏰ Login detection timeout in iframe');
               }, 300000);
             }
           `;
 
           iframe.contentDocument?.head.appendChild(script);
-          console.log("✅ Login detector script injected into iframe");
+          // console.log("✅ Login detector script injected into iframe");
         }
       } catch (error) {
-        console.log("❌ Could not inject script into iframe:", error);
+        // console.log("❌ Could not inject script into iframe:", error);
       }
     };
 
@@ -463,7 +463,7 @@ export function LinkedInIframeSimple() {
                     "width=600,height=800",
                   );
                   if (newWindow) {
-                    console.log("🔄 Trying alternative approach with new window");
+                    // console.log("🔄 Trying alternative approach with new window");
                     // We'll implement localStorage-based detection here
                   }
                 }}
@@ -506,7 +506,7 @@ export function LinkedInIframeSimple() {
                 sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-modals"
                 allow="camera; microphone; geolocation; fullscreen"
                 onError={() => {
-                  console.log("❌ Iframe failed to load");
+                  // console.log("❌ Iframe failed to load");
                   setError(
                     "Failed to load LinkedIn login page. Please check your internet connection and try again.",
                   );

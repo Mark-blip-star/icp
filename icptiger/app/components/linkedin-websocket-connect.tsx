@@ -30,13 +30,13 @@ export default function LinkedInWebSocketConnect({
   onClose,
   setCloseSession,
 }: LinkedInWebSocketConnectProps) {
-  console.log("🔧 LinkedInWebSocketConnect component created for userId:", userId);
-  console.log("🔧 Component props:", {
-    userId,
-    hasOnSuccess: !!onSuccess,
-    hasOnError: !!onError,
-    hasOnClose: !!onClose,
-  });
+  // console.log("🔧 LinkedInWebSocketConnect component created for userId:", userId);
+  // console.log("🔧 Component props:", {
+  //   userId,
+  //   hasOnSuccess: !!onSuccess,
+  //   hasOnError: !!onError,
+  //   hasOnClose: !!onClose,
+  // });
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -71,9 +71,9 @@ export default function LinkedInWebSocketConnect({
   const [lastClickPosition, setLastClickPosition] = useState<{ x: number; y: number } | null>(null);
 
   // Log overlay state changes
-  useEffect(() => {
-    console.log("Frontend: Input overlay state changed:", inputOverlay);
-  }, [inputOverlay]);
+  // useEffect(() => {
+  //   console.log("Frontend: Input overlay state changed:", inputOverlay);
+  // }, [inputOverlay]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -86,7 +86,7 @@ export default function LinkedInWebSocketConnect({
 
   useEffect(() => {
     return () => {
-      console.log("🧹 LinkedInWebSocketConnect component unmounting for userId:", userId);
+      // console.log("🧹 LinkedInWebSocketConnect component unmounting for userId:", userId);
       setHasAttemptedConnection(false);
       if (socket) {
         socket.disconnect();
@@ -96,15 +96,15 @@ export default function LinkedInWebSocketConnect({
 
   // Автоматичне підключення та запуск сесії при ініціалізації компонента
   useEffect(() => {
-    console.log("🔧 LinkedInWebSocketConnect useEffect triggered", {
-      userId,
-      isConnected,
-      isConnecting,
-      hasAttemptedConnection,
-    });
+    // console.log("🔧 LinkedInWebSocketConnect useEffect triggered", {
+    //   userId,
+    //   isConnected,
+    //   isConnecting,
+    //   hasAttemptedConnection,
+    // });
 
     if (userId && !hasAttemptedConnection && !isConnected && !isConnecting) {
-      console.log("🚀 Auto-connecting to WebSocket and starting session...");
+      // console.log("🚀 Auto-connecting to WebSocket and starting session...");
       setHasAttemptedConnection(true);
 
       // Add a small delay to avoid rapid mount/unmount cycles
@@ -114,20 +114,20 @@ export default function LinkedInWebSocketConnect({
         }
       }, 100);
     } else {
-      console.log("🔧 Skipping connection - already attempted or connected");
+      // console.log("🔧 Skipping connection - already attempted or connected");
     }
   }, [userId, hasAttemptedConnection, isConnected, isConnecting]);
 
   const connectToWebSocket = async () => {
-    console.log("🔌 connectToWebSocket called!", {
-      userId,
-      existingSocket: !!socket,
-      isConnecting,
-    });
-    console.log("🔌 Current state:", { isConnected, isConnecting, hasSocket: !!socket });
+    // console.log("🔌 connectToWebSocket called!", {
+    //   userId,
+    //   existingSocket: !!socket,
+    //   isConnecting,
+    // });
+    // console.log("🔌 Current state:", { isConnected, isConnecting, hasSocket: !!socket });
 
     if (socket || isConnecting) {
-      console.log("🔌 Already connected or connecting, skipping...");
+      // console.log("🔌 Already connected or connecting, skipping...");
       return;
     }
 
@@ -143,13 +143,13 @@ export default function LinkedInWebSocketConnect({
       });
 
       newSocket.on("connect", () => {
-        console.log("✅ WebSocket connected successfully!");
+        // console.log("✅ WebSocket connected successfully!");
         setIsConnected(true);
         setIsConnecting(false);
         addDebugInfo("Connected to WebSocket server");
 
         // Автоматично запускаємо браузерну сесію після підключення
-        console.log("🚀 Auto-starting browser session...");
+        // console.log("🚀 Auto-starting browser session...");
         newSocket.emit("startLogin");
       });
 
@@ -223,15 +223,15 @@ export default function LinkedInWebSocketConnect({
       });
 
       newSocket.on("screencast", (data) => {
-        console.log("Frontend: Received screencast event:", data);
-        console.log("Frontend: Data type:", typeof data);
-        console.log("Frontend: Data keys:", Object.keys(data));
-        console.log("Frontend: Data.data type:", typeof data.data);
-        console.log(
-          "Frontend: Data.data starts with:",
-          data.data ? data.data.substring(0, 50) : "no data",
-        );
-        console.log("Frontend: Data.data length:", data.data ? data.data.length : "no data");
+        // console.log("Frontend: Received screencast event:", data);
+        // console.log("Frontend: Data type:", typeof data);
+        // console.log("Frontend: Data keys:", Object.keys(data));
+        // console.log("Frontend: Data.data type:", typeof data.data);
+        // console.log(
+        //   "Frontend: Data.data starts with:",
+        //   data.data ? data.data.substring(0, 50) : "no data",
+        // );
+        // console.log("Frontend: Data.data length:", data.data ? data.data.length : "no data");
 
         // Check for double base64 issue
         if (data.data && typeof data.data === "string") {
@@ -239,15 +239,15 @@ export default function LinkedInWebSocketConnect({
             console.error("Frontend: ❌ DOUBLE BASE64 DETECTED! This is the bug!");
             console.error("Frontend: Double base64 data:", data.data.substring(0, 100) + "...");
           } else if (data.data.startsWith("data:image/jpeg;base64,")) {
-            console.log("Frontend: ✅ Valid single base64 data detected");
+            // console.log("Frontend: ✅ Valid single base64 data detected");
             setScreencastData(data.data);
             setIsImageLoaded(true);
-            console.log("Frontend: ✅ Screenshot data set successfully");
+            // console.log("Frontend: ✅ Screenshot data set successfully");
           } else if (data.data.startsWith("data:image/png;base64,")) {
-            console.log("Frontend: ✅ Valid PNG base64 data detected");
+            // console.log("Frontend: ✅ Valid PNG base64 data detected");
             setScreencastData(data.data);
             setIsImageLoaded(true);
-            console.log("Frontend: ✅ PNG screenshot data set successfully");
+            // console.log("Frontend: ✅ PNG screenshot data set successfully");
           } else {
             console.error("Frontend: ❌ Invalid data URL format:", data.data.substring(0, 50));
           }
@@ -257,12 +257,12 @@ export default function LinkedInWebSocketConnect({
       });
 
       newSocket.on("inputUpdated", (data) => {
-        console.log("Frontend: Received inputUpdated event:", JSON.stringify(data, null, 2));
+        // console.log("Frontend: Received inputUpdated event:", JSON.stringify(data, null, 2));
 
         if (data.element) {
           addDebugInfo(`Input updated: ${data.element.type} field - "${data.element.value}"`);
-          console.log("Frontend: Processing element update:", data.element);
-          console.log("Frontend: Element position:", data.element.position);
+          // console.log("Frontend: Processing element update:", data.element);
+          // console.log("Frontend: Element position:", data.element.position);
 
           // Update input overlay based on element type and placeholder
           const isEmailField =
@@ -274,34 +274,34 @@ export default function LinkedInWebSocketConnect({
             data.element.type === "password" ||
             data.element.placeholder?.toLowerCase().includes("password");
 
-          console.log("Frontend: Field detection:", {
-            isEmailField,
-            isPasswordField,
-            type: data.element.type,
-            placeholder: data.element.placeholder,
-          });
+          // console.log("Frontend: Field detection:", {
+          //   isEmailField,
+          //   isPasswordField,
+          //   type: data.element.type,
+          //   placeholder: data.element.placeholder,
+          // });
 
           if (isEmailField) {
-            console.log("Frontend: Updating email field with value:", data.element.value);
-            console.log("Frontend: Position data:", data.element.position);
-            console.log("Frontend: Alt position data:", data.element.altPosition);
-            console.log("Frontend: Selector:", data.element.selector);
-            console.log("Frontend: Position type:", typeof data.element.position);
-            console.log(
-              "Frontend: Position keys:",
-              data.element.position ? Object.keys(data.element.position) : "undefined",
-            );
+            // console.log("Frontend: Updating email field with value:", data.element.value);
+            // console.log("Frontend: Position data:", data.element.position);
+            // console.log("Frontend: Alt position data:", data.element.altPosition);
+            // console.log("Frontend: Selector:", data.element.selector);
+            // console.log("Frontend: Position type:", typeof data.element.position);
+            // console.log(
+            //   "Frontend: Position keys:",
+            //   data.element.position ? Object.keys(data.element.position) : "undefined",
+            // );
 
             // Try to find position using multiple methods
             let finalPosition = data.element.position;
 
             if (!finalPosition || finalPosition.x === 0) {
-              console.log("Frontend: Using alt position");
+              // console.log("Frontend: Using alt position");
               finalPosition = data.element.altPosition;
             }
 
             if (!finalPosition || finalPosition.x === 0) {
-              console.log("Frontend: Trying to find element by selector");
+              // console.log("Frontend: Trying to find element by selector");
               // Try to find element on frontend and get its position
               const element = document.querySelector(data.element.selector);
               if (element) {
@@ -312,7 +312,7 @@ export default function LinkedInWebSocketConnect({
                   width: rect.width,
                   height: rect.height,
                 };
-                console.log("Frontend: Found element by selector, position:", finalPosition);
+                // console.log("Frontend: Found element by selector, position:", finalPosition);
               }
             }
 
@@ -324,11 +324,11 @@ export default function LinkedInWebSocketConnect({
                 cursorPosition: data.element.cursorPosition,
                 position: finalPosition,
               };
-              console.log("Frontend: New email overlay state:", newState);
+              // console.log("Frontend: New email overlay state:", newState);
               return newState;
             });
           } else if (isPasswordField) {
-            console.log("Frontend: Updating password field with value:", data.element.value);
+            // console.log("Frontend: Updating password field with value:", data.element.value);
             setInputOverlay((prev) => {
               const newState = {
                 ...prev,
@@ -337,11 +337,11 @@ export default function LinkedInWebSocketConnect({
                 cursorPosition: data.element.cursorPosition,
                 position: data.element.position,
               };
-              console.log("Frontend: New password overlay state:", newState);
+              // console.log("Frontend: New password overlay state:", newState);
               return newState;
             });
           } else {
-            console.log("Frontend: Clearing active field - unknown field type");
+            // console.log("Frontend: Clearing active field - unknown field type");
             // Clear active field if clicking elsewhere
             setInputOverlay((prev) => ({
               ...prev,
@@ -353,7 +353,7 @@ export default function LinkedInWebSocketConnect({
         } else {
           // Clear overlay when no active element
           addDebugInfo("Input cleared - no active element");
-          console.log("Frontend: Clearing overlay - no active element");
+          // console.log("Frontend: Clearing overlay - no active element");
           setInputOverlay((prev) => ({
             ...prev,
             activeField: null,
@@ -363,16 +363,16 @@ export default function LinkedInWebSocketConnect({
       });
 
       newSocket.on("fieldClicked", (data) => {
-        console.log("Frontend: Received fieldClicked event:", data);
+        // console.log("Frontend: Received fieldClicked event:", data);
 
         if (data.success) {
           addDebugInfo(`Field clicked successfully: ${data.fieldType}`);
-          console.log(
-            "Frontend: Field click successful:",
-            data.fieldType,
-            "using selector:",
-            data.selector,
-          );
+          // console.log(
+          //   "Frontend: Field click successful:",
+          //   data.fieldType,
+          //   "using selector:",
+          //   data.selector,
+          // );
 
           // Update active field based on the clicked field
           if (data.fieldType === "email") {
@@ -484,35 +484,35 @@ export default function LinkedInWebSocketConnect({
   };
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    console.log("🎯 handleCanvasClick called!", {
-      socket: !!socket,
-      canvasRef: !!canvasRef.current,
-      isConnected,
-      screencastData: !!screencastData,
-      eventType: event.type,
-      clientX: event.clientX,
-      clientY: event.clientY,
-      target: event.target,
-      currentTarget: event.currentTarget,
-    });
+    // console.log("🎯 handleCanvasClick called!", {
+    //   socket: !!socket,
+    //   canvasRef: !!canvasRef.current,
+    //   isConnected,
+    //   screencastData: !!screencastData,
+    //   eventType: event.type,
+    //   clientX: event.clientX,
+    //   clientY: event.clientY,
+    //   target: event.target,
+    //   currentTarget: event.currentTarget,
+    // });
 
     // Додаємо додаткове логування для дебагу
-    console.log("🎯 Canvas element:", {
-      canvas: canvasRef.current,
-      canvasWidth: canvasRef.current?.width,
-      canvasHeight: canvasRef.current?.height,
-      canvasStyle: canvasRef.current?.style,
-    });
+    // console.log("🎯 Canvas element:", {
+    //   canvas: canvasRef.current,
+    //   canvasWidth: canvasRef.current?.width,
+    //   canvasHeight: canvasRef.current?.height,
+    //   canvasStyle: canvasRef.current?.style,
+    // });
 
     if (!socket || !canvasRef.current) {
-      console.log("❌ Early return - socket or canvas not available");
+      // console.log("❌ Early return - socket or canvas not available");
       return;
     }
 
     // Фокусуємо input для клавіатури при кліку на canvas
     if (hiddenInputRef.current) {
       hiddenInputRef.current.focus();
-      console.log("🎯 Input focused for keyboard events");
+      // console.log("🎯 Input focused for keyboard events");
     }
 
     const canvas = canvasRef.current;
@@ -531,12 +531,12 @@ export default function LinkedInWebSocketConnect({
     // Store last click position for debugging
     setLastClickPosition({ x: pageX, y: pageY });
 
-    console.log("🎯 UI Click detected:", {
-      display: { x: Math.round(x), y: Math.round(y) },
-      page: { x: Math.round(pageX), y: Math.round(pageY) },
-      canvas: { width: canvas.width, height: canvas.height },
-      rect: { width: rect.width, height: rect.height },
-    });
+    // console.log("🎯 UI Click detected:", {
+    //   display: { x: Math.round(x), y: Math.round(y) },
+    //   page: { x: Math.round(pageX), y: Math.round(pageY) },
+    //   canvas: { width: canvas.width, height: canvas.height },
+    //   rect: { width: rect.width, height: rect.height },
+    // });
 
     addDebugInfo(
       `🎯 UI Click: display (${Math.round(x)}, ${Math.round(y)}) -> page (${Math.round(pageX)}, ${Math.round(pageY)})`,
@@ -559,7 +559,7 @@ export default function LinkedInWebSocketConnect({
       pageY <= emailFieldArea.y + emailFieldArea.height
     ) {
       // Click on email field
-      console.log("Clicking email field");
+      // console.log("Clicking email field");
       addDebugInfo("Clicking email field");
       socket.emit("clickField", {
         fieldType: "email",
@@ -580,7 +580,7 @@ export default function LinkedInWebSocketConnect({
       pageY <= passwordFieldArea.y + passwordFieldArea.height
     ) {
       // Click on password field
-      console.log("Clicking password field");
+      // console.log("Clicking password field");
       addDebugInfo("Clicking password field");
       socket.emit("clickField", {
         fieldType: "password",
@@ -601,10 +601,10 @@ export default function LinkedInWebSocketConnect({
       pageY <= signInButtonArea.y + signInButtonArea.height
     ) {
       // Click on sign in button
-      console.log("🔘 Clicking sign in button");
+      // console.log("🔘 Clicking sign in button");
       addDebugInfo("Clicking sign in button");
 
-      console.log("🔘 Sending clickField event:", { fieldType: "signin", x: pageX, y: pageY });
+      // console.log("🔘 Sending clickField event:", { fieldType: "signin", x: pageX, y: pageY });
       socket.emit("clickField", {
         fieldType: "signin",
         x: pageX,
@@ -612,7 +612,7 @@ export default function LinkedInWebSocketConnect({
       });
     } else {
       // Regular mouse click
-      console.log("🖱️ Sending regular mouse click to backend:", { x: pageX, y: pageY });
+      // console.log("🖱️ Sending regular mouse click to backend:", { x: pageX, y: pageY });
 
       socket.emit("mouse", {
         type: "click",
@@ -639,7 +639,7 @@ export default function LinkedInWebSocketConnect({
     else if (event.key === "ArrowRight") key = "ArrowRight";
 
     addDebugInfo(`Key pressed: ${key}`);
-    console.log("Frontend: Sending keyboard event:", { type: "press", key });
+    // console.log("Frontend: Sending keyboard event:", { type: "press", key });
 
     socket.emit("keyboard", {
       type: "press",
@@ -676,28 +676,28 @@ export default function LinkedInWebSocketConnect({
   // Update canvas when screencast data changes
   useEffect(() => {
     if (screencastData && canvasRef.current && imageRef.current) {
-      console.log("Frontend: Updating canvas with screencast data");
-      console.log("Frontend: Screencast data length:", screencastData.length);
-      console.log("Frontend: Screencast data starts with:", screencastData.substring(0, 50));
+      // console.log("Frontend: Updating canvas with screencast data");
+      // console.log("Frontend: Screencast data length:", screencastData.length);
+      // console.log("Frontend: Screencast data starts with:", screencastData.substring(0, 50));
 
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
       const img = imageRef.current;
 
       img.onload = () => {
-        console.log("Frontend: Image loaded successfully", {
-          naturalWidth: img.naturalWidth,
-          naturalHeight: img.naturalHeight,
-        });
+        // console.log("Frontend: Image loaded successfully", {
+        //   naturalWidth: img.naturalWidth,
+        //   naturalHeight: img.naturalHeight,
+        // });
         if (ctx) {
           // Set canvas size to match the natural image size
           canvas.width = img.naturalWidth;
           canvas.height = img.naturalHeight;
           ctx.drawImage(img, 0, 0);
-          console.log("Frontend: Canvas updated with image", {
-            canvasWidth: canvas.width,
-            canvasHeight: canvas.height,
-          });
+          // console.log("Frontend: Canvas updated with image", {
+          //   canvasWidth: canvas.width,
+          //   canvasHeight: canvas.height,
+          // });
         }
       };
 
@@ -707,7 +707,7 @@ export default function LinkedInWebSocketConnect({
       };
 
       img.src = screencastData;
-      console.log("Frontend: Set image src to screencast data");
+      // console.log("Frontend: Set image src to screencast data");
     }
   }, [screencastData]);
 

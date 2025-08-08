@@ -40,15 +40,15 @@ export function LinkedInIntegratedLogin({
 
   const handleLoginSuccess = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log("🎉 Login success! Processing cookies...");
-      console.log(
-        "📋 li_at cookie:",
-        cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
-      );
-      console.log(
-        "📋 li_a cookie:",
-        cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
-      );
+      // console.log("🎉 Login success! Processing cookies...");
+      // console.log(
+      //   "📋 li_at cookie:",
+      //   cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
+      // );
+      // console.log(
+      //   "📋 li_a cookie:",
+      //   cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
+      // );
 
       if (cookies.li_at) {
         // Save cookies to backend
@@ -60,7 +60,7 @@ export function LinkedInIntegratedLogin({
         localStorage.setItem("linkedInCredentials", "true");
         window.dispatchEvent(new Event("linkedInCredentialsChanged"));
 
-        console.log("✅ LinkedIn connection completed successfully!");
+        // console.log("✅ LinkedIn connection completed successfully!");
 
         if (onSuccess) {
           onSuccess(cookies);
@@ -68,11 +68,11 @@ export function LinkedInIntegratedLogin({
 
         // Force refresh the page to update hasCredentials status
         setTimeout(() => {
-          console.log("🔄 Refreshing page to update connection status...");
+          // console.log("🔄 Refreshing page to update connection status...");
           window.location.reload();
         }, 2000);
       } else {
-        console.log("❌ No li_at cookie found");
+        // console.log("❌ No li_at cookie found");
         setError("No authentication cookies found. Please try logging in again.");
       }
     } catch (error) {
@@ -83,12 +83,12 @@ export function LinkedInIntegratedLogin({
 
   const saveLinkedInCookies = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log("💾 Saving cookies to backend...");
-      console.log("📤 Sending data to /api/linkedin/connect:", {
-        email: "websocket_user@example.com",
-        li_at: cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
-        li_a: cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
-      });
+      // console.log("💾 Saving cookies to backend...");
+      // console.log("📤 Sending data to /api/linkedin/connect:", {
+      //   email: "websocket_user@example.com",
+      //   li_at: cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
+      //   li_a: cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
+      // });
 
       const response = await fetch("/api/linkedin/connect", {
         method: "POST",
@@ -100,15 +100,15 @@ export function LinkedInIntegratedLogin({
         }),
       });
 
-      console.log("📡 Connect API response status:", response.status);
+      // console.log("📡 Connect API response status:", response.status);
       const result = await response.json();
-      console.log("📡 Connect API response:", result);
+      // console.log("📡 Connect API response:", result);
 
       if (!response.ok) {
         throw new Error(result.error || "Failed to save LinkedIn credentials");
       }
 
-      console.log("✅ Cookies saved successfully to backend!");
+      // console.log("✅ Cookies saved successfully to backend!");
       return result;
     } catch (error) {
       console.error("❌ Error saving cookies:", error);
@@ -117,7 +117,7 @@ export function LinkedInIntegratedLogin({
   };
 
   const handleWebSocketSuccess = async (cookies: { li_at: string; li_a?: string }) => {
-    console.log("🎉 WebSocket login successful!");
+    // console.log("🎉 WebSocket login successful!");
     await handleLoginSuccess(cookies as { li_at?: string; li_a?: string });
   };
 

@@ -411,7 +411,7 @@ export function DashboardHeader({
       {showLinkedInLogin && (
         <LinkedInIntegratedLogin
           onSuccess={(cookies) => {
-            console.log("LinkedIn connected successfully:", cookies);
+            // console.log("LinkedIn connected successfully:", cookies);
             setShowLinkedInLogin(false);
             setHasLinkedInCredentials(true);
           }}

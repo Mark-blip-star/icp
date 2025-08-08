@@ -45,14 +45,14 @@ export function LinkedInPopupAuto() {
 
   const startLoginCheck = (popup: Window) => {
     // Simple approach: just monitor popup URL changes and try to extract cookies
-    console.log("🔍 Starting login check for popup");
+    // console.log("🔍 Starting login check for popup");
 
     // Check if popup is closed and monitor URL changes
     checkIntervalRef.current = setInterval(async () => {
       try {
         // Check if popup is closed
         if (popup.closed) {
-          console.log("❌ Popup was closed");
+          // console.log("❌ Popup was closed");
           clearInterval(checkIntervalRef.current!);
           setShowPopup(false);
           setLoginStatus("idle");
@@ -61,7 +61,7 @@ export function LinkedInPopupAuto() {
 
         // Try to access URL (this might fail due to CORS)
         const currentUrl = popup.location.href;
-        console.log("🔍 Current popup URL:", currentUrl);
+        // console.log("🔍 Current popup URL:", currentUrl);
 
         const loginPatterns = [
           "/feed",
@@ -81,7 +81,7 @@ export function LinkedInPopupAuto() {
         const isLoggedIn = loginPatterns.some((pattern) => currentUrl.includes(pattern));
 
         if (isLoggedIn) {
-          console.log("✅ Login detected! URL pattern matched:", currentUrl);
+          // console.log("✅ Login detected! URL pattern matched:", currentUrl);
           setLoginStatus("success");
 
           // Try to extract cookies
@@ -103,22 +103,22 @@ export function LinkedInPopupAuto() {
         }
       } catch (error) {
         // CORS error - this is expected, we'll keep trying
-        console.log("🔄 CORS error, popup might still be on login page");
+        // console.log("🔄 CORS error, popup might still be on login page");
       }
     }, 3000); // Check every 3 seconds
   };
 
   const handleLoginSuccess = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log("🎉 Login success! Processing cookies...");
-      console.log(
-        "📋 li_at cookie:",
-        cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
-      );
-      console.log(
-        "📋 li_a cookie:",
-        cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
-      );
+      // console.log("🎉 Login success! Processing cookies...");
+      // console.log(
+      //   "📋 li_at cookie:",
+      //   cookies.li_at ? cookies.li_at.substring(0, 20) + "..." : "Not found",
+      // );
+      // console.log(
+      //   "📋 li_a cookie:",
+      //   cookies.li_a ? cookies.li_a.substring(0, 20) + "..." : "Not found",
+      // );
 
       if (cookies.li_at) {
         // Save cookies to backend
@@ -135,7 +135,7 @@ export function LinkedInPopupAuto() {
         localStorage.setItem("linkedInCredentials", "true");
         window.dispatchEvent(new Event("linkedInCredentialsChanged"));
 
-        console.log("✅ LinkedIn connection completed successfully!");
+        // console.log("✅ LinkedIn connection completed successfully!");
 
         // Redirect after success
         setTimeout(() => {
@@ -158,30 +158,30 @@ export function LinkedInPopupAuto() {
   ): Promise<{ li_at?: string; li_a?: string }> => {
     return new Promise((resolve, reject) => {
       try {
-        console.log("🔧 Attempting to extract cookies from popup...");
+        // console.log("🔧 Attempting to extract cookies from popup...");
 
         // Create a script to extract cookies
         const script = popup.document.createElement("script");
         script.textContent = `
           try {
-            console.log('🔍 Extracting cookies from LinkedIn...');
+            // console.log('🔍 Extracting cookies from LinkedIn...');
             const cookies = document.cookie;
-            console.log('📋 All cookies found:', cookies);
+            // console.log('📋 All cookies found:', cookies);
             
             const liAt = cookies.split(';').find(c => c.trim().startsWith('li_at='))?.split('=')[1];
             const liA = cookies.split(';').find(c => c.trim().startsWith('li_a='))?.split('=')[1];
             
-            console.log('🍪 li_at found:', !!liAt);
-            console.log('🍪 li_a found:', !!liA);
+            // console.log('🍪 li_at found:', !!liAt);
+            // console.log('🍪 li_a found:', !!liA);
             
             if (liAt) {
-              console.log('✅ Authentication cookies found!');
-              console.log('📋 li_at cookie (first 20 chars):', liAt.substring(0, 20) + '...');
+              // console.log('✅ Authentication cookies found!');
+              // console.log('📋 li_at cookie (first 20 chars):', liAt.substring(0, 20) + '...');
               if (liA) {
-                console.log('📋 li_a cookie (first 20 chars):', liA.substring(0, 20) + '...');
+                // console.log('📋 li_a cookie (first 20 chars):', liA.substring(0, 20) + '...');
               }
             } else {
-              console.log('❌ No authentication cookies found');
+              // console.log('❌ No authentication cookies found');
             }
             
             // Store in localStorage for parent to read
@@ -198,7 +198,7 @@ export function LinkedInPopupAuto() {
                 cookies: { li_at: liAt, li_a: liA }
               }, '*');
             } catch (e) {
-              console.log('PostMessage failed, using localStorage');
+              // console.log('PostMessage failed, using localStorage');
             }
           } catch (error) {
             console.error('❌ Error extracting cookies:', error);
@@ -207,12 +207,12 @@ export function LinkedInPopupAuto() {
         `;
 
         popup.document.head.appendChild(script);
-        console.log("✅ Cookie extraction script injected");
+        // console.log("✅ Cookie extraction script injected");
 
         // Listen for postMessage response
         const handleMessage = (event: MessageEvent) => {
           if (event.data.type === "cookies-extracted") {
-            console.log("📨 Received cookies via postMessage:", event.data.cookies);
+            // console.log("📨 Received cookies via postMessage:", event.data.cookies);
             window.removeEventListener("message", handleMessage);
             resolve(event.data.cookies);
           }
@@ -228,7 +228,7 @@ export function LinkedInPopupAuto() {
 
             if (cookiesData) {
               const data = JSON.parse(cookiesData);
-              console.log("📨 Received cookies via localStorage");
+              // console.log("📨 Received cookies via localStorage");
               localStorage.removeItem("linkedin_extracted_cookies");
               window.removeEventListener("message", handleMessage);
               resolve(data);
@@ -239,7 +239,7 @@ export function LinkedInPopupAuto() {
               reject(new Error(errorData));
             }
           } catch (error) {
-            console.log("Error checking localStorage:", error);
+            // console.log("Error checking localStorage:", error);
           }
         };
 
@@ -259,7 +259,7 @@ export function LinkedInPopupAuto() {
 
   const saveLinkedInCookies = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log("💾 Saving cookies to backend...");
+      // console.log("💾 Saving cookies to backend...");
       const response = await fetch("/api/linkedin/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -276,7 +276,7 @@ export function LinkedInPopupAuto() {
         throw new Error(result.error || "Failed to save LinkedIn credentials");
       }
 
-      console.log("✅ Cookies saved successfully to backend!");
+      // console.log("✅ Cookies saved successfully to backend!");
       return result;
     } catch (error) {
       console.error("❌ Error saving cookies:", error);

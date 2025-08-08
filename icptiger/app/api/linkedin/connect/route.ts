@@ -4,7 +4,7 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { Database } from "@/types/supabase";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const maxDuration = 59; // timeout: 59 seconds
 const LOGIN_API_BASE = process.env.LOGIN_API_BASE_URL;
 
@@ -30,10 +30,7 @@ export async function POST(request: NextRequest) {
       body = await request.json();
     } catch (error) {
       console.error("Error parsing request body:", error);
-      return NextResponse.json(
-        { error: "Invalid request body format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid request body format" }, { status: 400 });
     }
 
     const { email, password, li_at, li_a } = body;
@@ -43,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (!password && !li_at && !li_a) {
       return NextResponse.json(
         { error: "Either password or cookies (li_at) are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -59,10 +56,7 @@ export async function POST(request: NextRequest) {
 
     if (fetchError && fetchError.code !== "PGRST116") {
       console.error("Error fetching existing account:", fetchError);
-      return NextResponse.json(
-        { error: "Failed to check existing account" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to check existing account" }, { status: 500 });
     }
 
     const now = new Date().toISOString();
@@ -95,7 +89,7 @@ export async function POST(request: NextRequest) {
         console.error("Error updating account:", error);
         return NextResponse.json(
           { error: `Failed to update LinkedIn account: ${error.message}` },
-          { status: 500 }
+          { status: 500 },
         );
       }
       accountRecord = data;
@@ -114,7 +108,7 @@ export async function POST(request: NextRequest) {
         console.error("Error creating account:", error);
         return NextResponse.json(
           { error: `Failed to create LinkedIn account: ${error.message}` },
-          { status: 500 }
+          { status: 500 },
         );
       }
       accountRecord = data;
@@ -132,17 +126,14 @@ export async function POST(request: NextRequest) {
     if (profileUpdateError) {
       console.error("Error updating profile linkedin_connected status:", profileUpdateError);
     } else {
-      console.log("✅ Updated profile linkedin_connected to true");
+      // console.log("✅ Updated profile linkedin_connected to true");
     }
 
     // LinkedIn account verification completed
     // Call external login API
     if (LOGIN_API_BASE) {
       try {
-        const loginResponse = await fetch(
-          `${LOGIN_API_BASE}/login/${user.id}`,
-          { method: 'POST' }
-        );
+        const loginResponse = await fetch(`${LOGIN_API_BASE}/login/${user.id}`, { method: "POST" });
         if (!loginResponse.ok) {
           console.error("Login API error");
         }
@@ -157,10 +148,13 @@ export async function POST(request: NextRequest) {
       verification: verificationResult,
     });
   } catch (error) {
-    console.error("Error connecting LinkedIn account:", error instanceof Error ? error.message : String(error));
+    console.error(
+      "Error connecting LinkedIn account:",
+      error instanceof Error ? error.message : String(error),
+    );
     return NextResponse.json(
       { error: "Failed to connect LinkedIn account. Please try again." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

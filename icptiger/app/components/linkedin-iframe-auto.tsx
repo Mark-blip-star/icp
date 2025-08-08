@@ -33,7 +33,7 @@ export function LinkedInIframeAuto() {
         const currentUrl = iframe.contentWindow?.location.href;
 
         if (currentUrl) {
-          console.log("Current iframe URL:", currentUrl);
+          // console.log("Current iframe URL:", currentUrl);
 
           // Check if user is logged in
           if (
@@ -44,14 +44,14 @@ export function LinkedInIframeAuto() {
             currentUrl.includes("/mynetwork/invitation-manager") ||
             currentUrl.includes("/notifications")
           ) {
-            console.log("Login detected! Extracting cookies...");
+            // console.log("Login detected! Extracting cookies...");
             setLoginStatus("success");
             extractCookiesFromIframe();
           }
         }
       } catch (error) {
         // CORS error - this is expected, we'll use alternative method
-        console.log("CORS error, using alternative cookie extraction");
+        // console.log("CORS error, using alternative cookie extraction");
       }
     };
 
@@ -77,13 +77,13 @@ export function LinkedInIframeAuto() {
       const script = `
         try {
           const cookies = document.cookie;
-          console.log('All cookies:', cookies);
+          // console.log('All cookies:', cookies);
           
           const liAt = cookies.split(';').find(c => c.trim().startsWith('li_at='))?.split('=')[1];
           const liA = cookies.split(';').find(c => c.trim().startsWith('li_a='))?.split('=')[1];
           
-          console.log('li_at found:', !!liAt);
-          console.log('li_a found:', !!liA);
+          // console.log('li_at found:', !!liAt);
+          // console.log('li_a found:', !!liA);
           
           // Send cookies back to parent
           window.parent.postMessage({
@@ -109,7 +109,7 @@ export function LinkedInIframeAuto() {
       // Listen for the response
       const handleMessage = (event: MessageEvent) => {
         if (event.data.type === "linkedin-cookies") {
-          console.log("Received cookies:", event.data.cookies);
+          // console.log("Received cookies:", event.data.cookies);
           if (event.data.cookies.li_at) {
             handleLoginSuccess(event.data.cookies);
           } else {
@@ -142,7 +142,7 @@ export function LinkedInIframeAuto() {
 
   const handleLoginSuccess = async (cookies: { li_at?: string; li_a?: string }) => {
     try {
-      console.log("Saving cookies to backend...");
+      // console.log("Saving cookies to backend...");
       const response = await fetch("/api/linkedin/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -159,7 +159,7 @@ export function LinkedInIframeAuto() {
         throw new Error(result.error || "Failed to save LinkedIn credentials");
       }
 
-      console.log("Cookies saved successfully!");
+      // console.log("Cookies saved successfully!");
       setIsConnected(true);
       localStorage.setItem("linkedInCredentials", "true");
       window.dispatchEvent(new Event("linkedInCredentialsChanged"));

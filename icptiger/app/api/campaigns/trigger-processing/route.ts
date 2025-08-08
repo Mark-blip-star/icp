@@ -8,23 +8,23 @@ async function triggerCampaignProcessing(campaignId: string) {
   // TODO: Import and use the actual queue functions
   // import { queueLeadExtraction } from "../../../../icptiger-automation/src/jobs/queue";
   // await queueLeadExtraction(campaignId, 15); // High priority for immediate processing
-  
-  console.log(`📤 [API] Triggered processing for campaign: ${campaignId}`);
-  
+
+  // console.log(`📤 [API] Triggered processing for campaign: ${campaignId}`);
+
   // For now, we'll make an HTTP request to the automation service
   try {
-    const automationServiceUrl = process.env.AUTOMATION_SERVICE_URL || 'http://localhost:3001';
+    const automationServiceUrl = process.env.AUTOMATION_SERVICE_URL || "http://localhost:3001";
     const response = await fetch(`${automationServiceUrl}/api/queue-campaign`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ campaignId, priority: 15 }),
     });
-    
+
     if (!response.ok) {
       throw new Error(`Automation service responded with status: ${response.status}`);
     }
-    
-    console.log(`✅ [API] Campaign processing queued successfully: ${campaignId}`);
+
+    // console.log(`✅ [API] Campaign processing queued successfully: ${campaignId}`);
   } catch (error) {
     console.error(`❌ [API] Failed to trigger campaign processing:`, error);
     // Don't throw - this is non-critical, the 5-minute cron will pick it up
@@ -65,26 +65,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (campaign.status !== "queued") {
-      return NextResponse.json({ 
-        error: "Campaign is not in queued status", 
-        current_status: campaign.status 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Campaign is not in queued status",
+          current_status: campaign.status,
+        },
+        { status: 400 },
+      );
     }
 
     // Trigger campaign processing
     await triggerCampaignProcessing(campaignId);
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Campaign processing triggered",
-      campaignId 
+      campaignId,
     });
-
   } catch (error) {
     console.error("Error triggering campaign processing:", error);
-    return NextResponse.json(
-      { error: "Failed to trigger campaign processing" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to trigger campaign processing" }, { status: 500 });
   }
 }
