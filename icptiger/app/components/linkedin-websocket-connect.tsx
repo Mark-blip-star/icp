@@ -30,6 +30,14 @@ export default function LinkedInWebSocketConnect({
   onClose,
   setCloseSession,
 }: LinkedInWebSocketConnectProps) {
+  console.log("🔧 LinkedInWebSocketConnect component created for userId:", userId);
+  console.log("🔧 Component props:", {
+    userId,
+    hasOnSuccess: !!onSuccess,
+    hasOnError: !!onError,
+    hasOnClose: !!onClose,
+  });
+
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -39,6 +47,7 @@ export default function LinkedInWebSocketConnect({
   const [isLoading, setIsLoading] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
   const [inputOverlay, setInputOverlay] = useState<{
     email: string;
     password: string;
@@ -77,6 +86,8 @@ export default function LinkedInWebSocketConnect({
 
   useEffect(() => {
     return () => {
+      console.log("🧹 LinkedInWebSocketConnect component unmounting for userId:", userId);
+      setHasAttemptedConnection(false);
       if (socket) {
         socket.disconnect();
       }
@@ -85,18 +96,39 @@ export default function LinkedInWebSocketConnect({
 
   // Автоматичне підключення та запуск сесії при ініціалізації компонента
   useEffect(() => {
-    if (userId) {
+    console.log("🔧 LinkedInWebSocketConnect useEffect triggered", {
+      userId,
+      isConnected,
+      isConnecting,
+      hasAttemptedConnection,
+    });
+
+    if (userId && !hasAttemptedConnection && !isConnected && !isConnecting) {
       console.log("🚀 Auto-connecting to WebSocket and starting session...");
-      connectToWebSocket();
+      setHasAttemptedConnection(true);
+
+      // Add a small delay to avoid rapid mount/unmount cycles
+      setTimeout(() => {
+        if (!isConnecting && !isConnected) {
+          connectToWebSocket();
+        }
+      }, 100);
+    } else {
+      console.log("🔧 Skipping connection - already attempted or connected");
     }
-  }, [userId]);
+  }, [userId, hasAttemptedConnection, isConnected, isConnecting]);
 
   const connectToWebSocket = async () => {
-    console.log("🔌 connectToWebSocket called!", { userId, existingSocket: !!socket });
+    console.log("🔌 connectToWebSocket called!", {
+      userId,
+      existingSocket: !!socket,
+      isConnecting,
+    });
+    console.log("🔌 Current state:", { isConnected, isConnecting, hasSocket: !!socket });
 
-    if (socket) {
-      console.log("🔌 Disconnecting existing socket...");
-      socket.disconnect();
+    if (socket || isConnecting) {
+      console.log("🔌 Already connected or connecting, skipping...");
+      return;
     }
 
     setIsConnecting(true);
