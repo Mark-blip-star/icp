@@ -6,6 +6,15 @@ import { Browser, Page } from 'puppeteer';
 
 puppeteer.use(StealthPlugin());
 
+interface BrowserConfig {
+  executablePath?: string;
+  headless: boolean;
+  defaultViewport: {
+    width: number;
+    height: number;
+  };
+}
+
 @Injectable()
 export class PuppeteerService implements OnModuleInit {
   private readonly logger = new Logger(PuppeteerService.name);
@@ -19,14 +28,14 @@ export class PuppeteerService implements OnModuleInit {
 
   async launchBrowser(): Promise<Browser> {
     try {
-      const config = this.configService.get('browser');
+      const config = this.configService.get<BrowserConfig>('browser');
 
       if (!config) {
         throw new Error('Browser configuration not found');
       }
 
       const browserOptions = {
-        headless: true,
+        headless: false,
         executablePath: config.executablePath,
         args: [
           '--no-sandbox',
@@ -40,8 +49,16 @@ export class PuppeteerService implements OnModuleInit {
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding',
+          `--window-size=${config.defaultViewport.width},${config.defaultViewport.height}`,
+          '--start-maximized',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
         ],
-        defaultViewport: null, // Let browser use default size
+        defaultViewport: {
+          width: config.defaultViewport.width,
+          height: config.defaultViewport.height,
+          deviceScaleFactor: 1,
+        },
       };
 
       this.browser = await puppeteer.launch(browserOptions);
@@ -62,18 +79,33 @@ export class PuppeteerService implements OnModuleInit {
         throw new Error('No browser instance available');
       }
 
+      const config = this.configService.get<BrowserConfig>('browser');
+
+      if (!config) {
+        throw new Error('Browser configuration not found');
+      }
+
       const page = await targetBrowser.newPage();
 
-      // Let page use its natural size
+      // Set proper viewport size from configuration
       await page.setViewport({
-        width: 0,
-        height: 0,
+        width: config.defaultViewport.width,
+        height: config.defaultViewport.height,
         deviceScaleFactor: 1,
       });
 
+      // Set user agent
       await page.setUserAgent(
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       );
+
+      // Set extra headers for better compatibility
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      });
 
       return page;
     } catch (error) {

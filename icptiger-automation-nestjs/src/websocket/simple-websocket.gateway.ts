@@ -74,6 +74,7 @@ export class SimpleWebsocketGateway
   ) {
     const query = client.handshake.query as any;
     const userId = query.user_id as string;
+    const { email, password } = data || {};
 
     if (!userId) {
       client.emit('error', 'User ID not provided');
@@ -82,6 +83,17 @@ export class SimpleWebsocketGateway
 
     this.logger.log(
       `[${userId}] Start login requested - checking session status`,
+    );
+
+    // Логуємо credentials
+    this.logger.log(
+      `[${userId}] Credentials received - Email: ${email ? 'provided' : 'missing'}, Password: ${password ? 'provided' : 'missing'}`,
+    );
+
+    // Детальне логування data об'єкта
+    this.logger.log(
+      `[${userId}] Full data object:`,
+      JSON.stringify(data, null, 2),
     );
 
     try {
@@ -115,6 +127,13 @@ export class SimpleWebsocketGateway
             },
           );
 
+          // Встановлюємо callback для показу canvas при CAPTCHA
+          this.linkedInAutomationService.setShowCanvasCallback(userId, () => {
+            client.emit('showCanvas', {
+              message: 'CAPTCHA detected - showing interactive canvas',
+            });
+          });
+
           client.emit('readyForLogin', {
             message: 'LinkedIn session already active, ready for interaction',
             url: session.page.url(),
@@ -143,6 +162,80 @@ export class SimpleWebsocketGateway
                 `[${userId}] LinkedIn login page loaded and ready`,
               );
 
+              // Автоматично заповнюємо поля якщо є credentials
+              if (email && password) {
+                this.logger.log(`[${userId}] Auto-filling credentials`);
+                try {
+                  // Заповнюємо email
+                  this.logger.log(`[${userId}] Looking for email field...`);
+                  await page.waitForSelector(
+                    'input[type="email"], input[name="session_key"]',
+                    { timeout: 5000 },
+                  );
+                  this.logger.log(
+                    `[${userId}] Email field found, typing email...`,
+                  );
+                  await page.type(
+                    'input[type="email"], input[name="session_key"]',
+                    email,
+                  );
+
+                  // Заповнюємо password
+                  this.logger.log(`[${userId}] Looking for password field...`);
+                  await page.waitForSelector(
+                    'input[type="password"], input[name="session_password"]',
+                    { timeout: 5000 },
+                  );
+                  this.logger.log(
+                    `[${userId}] Password field found, typing password...`,
+                  );
+                  await page.type(
+                    'input[type="password"], input[name="session_password"]',
+                    password,
+                  );
+
+                  // Натискаємо кнопку Sign in
+                  this.logger.log(`[${userId}] Looking for sign in button...`);
+                  // Спробуємо різні варіанти кнопки
+                  try {
+                    await page.click('button[type="submit"]');
+                  } catch (e1) {
+                    try {
+                      await page.click('button[aria-label*="Sign in"]');
+                    } catch (e2) {
+                      try {
+                        await page.click('button:has-text("Sign in")');
+                      } catch (e3) {
+                        // Якщо нічого не знайдено, спробуємо знайти будь-яку кнопку з текстом "Sign in"
+                        const buttons = await page.$$('button');
+                        for (const button of buttons) {
+                          const text = await button.evaluate(
+                            (el) => el.textContent,
+                          );
+                          if (text && text.toLowerCase().includes('sign in')) {
+                            await button.click();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }
+
+                  this.logger.log(
+                    `[${userId}] Credentials filled and sign in clicked`,
+                  );
+                } catch (fillError) {
+                  this.logger.error(
+                    `[${userId}] Error auto-filling credentials:`,
+                    fillError,
+                  );
+                }
+              } else {
+                this.logger.log(
+                  `[${userId}] No credentials provided, skipping auto-fill`,
+                );
+              }
+
               // Встановлюємо callback для успішної авторизації
               this.linkedInAutomationService.setLoginSuccessCallback(
                 userId,
@@ -166,6 +259,16 @@ export class SimpleWebsocketGateway
                       error,
                     );
                   }
+                },
+              );
+
+              // Встановлюємо callback для показу canvas при CAPTCHA
+              this.linkedInAutomationService.setShowCanvasCallback(
+                userId,
+                () => {
+                  client.emit('showCanvas', {
+                    message: 'CAPTCHA detected - showing interactive canvas',
+                  });
                 },
               );
 
@@ -1086,22 +1189,7 @@ export class SimpleWebsocketGateway
           );
         }
 
-        // Method 2: Try by coordinates if selector failed
-        if (!clicked && x !== undefined && y !== undefined) {
-          try {
-            await session.page.mouse.click(x, y);
-            this.logger.log(
-              `[${userId}] ✅ Clicked field by coordinates: ${x}, ${y}`,
-            );
-            clicked = true;
-          } catch (coordError) {
-            this.logger.warn(
-              `[${userId}] Coordinate click failed: ${coordError.message}`,
-            );
-          }
-        }
-
-        // Method 3: Try to find element by text content for buttons
+        // Method 2: Try to find element by text content for buttons (only for signin)
         if (!clicked && fieldType === 'signin') {
           try {
             const buttonText = await session.page.evaluate(() => {

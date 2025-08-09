@@ -25,7 +25,7 @@ export interface AppConfig {
 
 function getDefaultChromePath(): string | undefined {
   const platform = os.platform();
-  
+
   switch (platform) {
     case 'darwin': // macOS
       return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -43,7 +43,9 @@ export default (): AppConfig => {
   const supabaseKey = process.env.SUPABASE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing required environment variables: SUPABASE_URL and SUPABASE_KEY');
+    throw new Error(
+      'Missing required environment variables: SUPABASE_URL and SUPABASE_KEY',
+    );
   }
 
   return {
@@ -60,12 +62,13 @@ export default (): AppConfig => {
       port: parseInt(process.env.REDIS_PORT || '6379', 10),
     },
     browser: {
-      executablePath: process.env.CHROME_EXECUTABLE_PATH || getDefaultChromePath(),
+      executablePath:
+        process.env.CHROME_EXECUTABLE_PATH || getDefaultChromePath(),
       headless: process.env.HEADLESS !== 'false',
       defaultViewport: {
-        width: parseInt(process.env.VIEWPORT_WIDTH || '1920', 10),
-        height: parseInt(process.env.VIEWPORT_HEIGHT || '1080', 10),
+        width: parseInt(process.env.VIEWPORT_WIDTH || '800', 10),
+        height: parseInt(process.env.VIEWPORT_HEIGHT || '1200', 10),
       },
     },
   };
-}; 
+};

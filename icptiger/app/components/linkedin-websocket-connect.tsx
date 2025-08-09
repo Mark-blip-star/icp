@@ -10,10 +10,13 @@ import { io, Socket } from "socket.io-client";
 
 interface LinkedInWebSocketConnectProps {
   userId: string;
+  email: string;
+  password: string;
   onSuccess?: (cookies: { li_at: string; li_a?: string }) => void;
   onError?: (error: string) => void;
   onClose?: () => void;
   setCloseSession?: (closeFn: () => void) => void;
+  onShowCanvas?: () => void;
 }
 
 interface SessionStatus {
@@ -25,10 +28,13 @@ interface SessionStatus {
 
 export default function LinkedInWebSocketConnect({
   userId,
+  email,
+  password,
   onSuccess,
   onError,
   onClose,
   setCloseSession,
+  onShowCanvas,
 }: LinkedInWebSocketConnectProps) {
   // console.log("🔧 LinkedInWebSocketConnect component created for userId:", userId);
   // console.log("🔧 Component props:", {
@@ -48,6 +54,7 @@ export default function LinkedInWebSocketConnect({
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
+  const [showCanvas, setShowCanvas] = useState(false);
   const [inputOverlay, setInputOverlay] = useState<{
     email: string;
     password: string;
@@ -150,7 +157,7 @@ export default function LinkedInWebSocketConnect({
 
         // Автоматично запускаємо браузерну сесію після підключення
         // console.log("🚀 Auto-starting browser session...");
-        newSocket.emit("startLogin");
+        newSocket.emit("startLogin", { email, password });
       });
 
       newSocket.on("disconnect", () => {
@@ -174,6 +181,14 @@ export default function LinkedInWebSocketConnect({
 
       newSocket.on("loginStarted", (data) => {
         addDebugInfo(`Login started: ${data.message}`);
+      });
+
+      newSocket.on("showCanvas", (data) => {
+        addDebugInfo(`Canvas requested: ${data.message}`);
+        setShowCanvas(true);
+        if (onShowCanvas) {
+          onShowCanvas();
+        }
       });
 
       newSocket.on("loginSuccess", (data) => {
@@ -418,13 +433,14 @@ export default function LinkedInWebSocketConnect({
     }
   };
 
-  const startLogin = () => {
-    if (!socket) return;
+  // const startLogin = () => {
+  //   if (!socket) return;
 
-    setIsLoading(true);
-    addDebugInfo("Starting LinkedIn login...");
-    socket.emit("startLogin");
-  };
+  //   setIsLoading(true);
+  //   addDebugInfo("Starting LinkedIn login...");
+  //   console.log("Frontend: Sending credentials:", { email, password });
+  //   socket.emit("startLogin", { email, password });
+  // };
 
   const closeSession = () => {
     if (socket) {
@@ -714,7 +730,7 @@ export default function LinkedInWebSocketConnect({
   return (
     <div className="space-y-4">
       {/* Browser View */}
-      {isConnected ? (
+      {isConnected && showCanvas ? (
         <div className="space-y-4">
           <div className="border rounded-lg overflow-hidden bg-white relative">
             {!isImageLoaded ? (
@@ -727,7 +743,7 @@ export default function LinkedInWebSocketConnect({
             ) : (
               <canvas
                 ref={canvasRef}
-                className="w-full h-auto max-h-[70vh] object-contain"
+                className="w-full h-auto max-h-[100vh] object-scale-down"
                 style={{
                   imageRendering: "pixelated",
                   maxWidth: "100%",
@@ -759,6 +775,13 @@ export default function LinkedInWebSocketConnect({
                 zIndex: -1,
               }}
             />
+          </div>
+        </div>
+      ) : isConnected ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Processing login automatically...</p>
           </div>
         </div>
       ) : (

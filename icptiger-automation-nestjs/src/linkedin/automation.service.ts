@@ -150,6 +150,10 @@ export class LinkedInAutomationService {
     this.sessionService.setScreenshotUpdateCallback(userId, callback);
   }
 
+  setShowCanvasCallback(userId: string, callback: () => void): void {
+    this.sessionService.setShowCanvasCallback(userId, callback);
+  }
+
   /**
    * Close session for user
    */

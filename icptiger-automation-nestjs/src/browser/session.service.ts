@@ -14,6 +14,7 @@ export interface BrowserSessionInfo {
   clientSession?: any; // CDP session for screencast
   onLoginSuccess?: () => void; // Callback for login success
   onScreenshotUpdate?: () => void; // Callback for screenshot updates
+  onShowCanvas?: () => void; // Callback for showing canvas
   screencastRunning?: boolean; // Flag to track if screencast is active
 }
 
@@ -144,12 +145,18 @@ export class SessionService {
           console.log(
             `[${userId}] CAPTCHA detected in console, triggering screenshot update`,
           );
+
+          // Показуємо canvas при CAPTCHA
+          if (sessionInfo.onShowCanvas) {
+            sessionInfo.onShowCanvas();
+          }
+
           // Wait for CAPTCHA to fully load
           setTimeout(() => {
             if (sessionInfo.onScreenshotUpdate) {
               sessionInfo.onScreenshotUpdate();
             }
-          }, 2000);
+          }, 3000); // Збільшено з 2000 до 3000
 
           // Additional screenshot for CAPTCHA after 1.5 more seconds
           setTimeout(() => {
@@ -159,7 +166,7 @@ export class SessionService {
               );
               sessionInfo.onScreenshotUpdate();
             }
-          }, 3500); // 2 + 1.5 = 3.5 seconds total
+          }, 4500); // Збільшено з 3500 до 4500
         }
       });
 
@@ -174,22 +181,18 @@ export class SessionService {
           console.log(
             `[${userId}] CAPTCHA/Challenge response detected, triggering screenshot update`,
           );
+
+          // Показуємо canvas при CAPTCHA response
+          if (sessionInfo.onShowCanvas) {
+            sessionInfo.onShowCanvas();
+          }
+
           // Wait for response content to be processed
           setTimeout(() => {
             if (sessionInfo.onScreenshotUpdate) {
               sessionInfo.onScreenshotUpdate();
             }
-          }, 1500);
-
-          // Additional screenshot for response after 1.5 more seconds
-          setTimeout(() => {
-            if (sessionInfo.onScreenshotUpdate) {
-              console.log(
-                `[${userId}] Additional response screenshot update for complete load`,
-              );
-              sessionInfo.onScreenshotUpdate();
-            }
-          }, 3000); // 1.5 + 1.5 = 3 seconds total
+          }, 2000); // Збільшено з 1000 до 2000
         }
       });
 
@@ -371,6 +374,13 @@ export class SessionService {
     const session = this.sessions.get(userId);
     if (session) {
       session.onScreenshotUpdate = callback;
+    }
+  }
+
+  setShowCanvasCallback(userId: string, callback: () => void): void {
+    const session = this.sessions.get(userId);
+    if (session) {
+      session.onShowCanvas = callback;
     }
   }
 
