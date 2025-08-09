@@ -109,6 +109,16 @@ export class SessionService {
             sessionInfo.onScreenshotUpdate();
           }
         }, 1500);
+
+        // Additional screenshot after 1.5 more seconds
+        setTimeout(() => {
+          if (sessionInfo.onScreenshotUpdate) {
+            console.log(
+              `[${userId}] Additional screenshot update after page load`,
+            );
+            sessionInfo.onScreenshotUpdate();
+          }
+        }, 3000); // 1.5 + 1.5 = 3 seconds total
       });
 
       page.on('domcontentloaded', () => {
@@ -121,6 +131,16 @@ export class SessionService {
             sessionInfo.onScreenshotUpdate();
           }
         }, 1000);
+
+        // Additional screenshot after 1.5 more seconds
+        setTimeout(() => {
+          if (sessionInfo.onScreenshotUpdate) {
+            console.log(
+              `[${userId}] Additional screenshot update after DOM content loaded`,
+            );
+            sessionInfo.onScreenshotUpdate();
+          }
+        }, 2500); // 1 + 1.5 = 2.5 seconds total
       });
 
       // Monitor for network idle to catch dynamic content changes
@@ -129,6 +149,16 @@ export class SessionService {
         if (sessionInfo.onScreenshotUpdate) {
           sessionInfo.onScreenshotUpdate();
         }
+
+        // Additional screenshot after 1.5 seconds
+        setTimeout(() => {
+          if (sessionInfo.onScreenshotUpdate) {
+            console.log(
+              `[${userId}] Additional screenshot update after network idle`,
+            );
+            sessionInfo.onScreenshotUpdate();
+          }
+        }, 1500);
       });
 
       // Monitor for network idle2 (less strict, catches more dynamic content)
@@ -137,6 +167,16 @@ export class SessionService {
         if (sessionInfo.onScreenshotUpdate) {
           sessionInfo.onScreenshotUpdate();
         }
+
+        // Additional screenshot after 1.5 seconds
+        setTimeout(() => {
+          if (sessionInfo.onScreenshotUpdate) {
+            console.log(
+              `[${userId}] Additional screenshot update after network idle2`,
+            );
+            sessionInfo.onScreenshotUpdate();
+          }
+        }, 1500);
       });
 
       // Monitor for console messages (CAPTCHA often logs messages)
@@ -167,6 +207,16 @@ export class SessionService {
               sessionInfo.onScreenshotUpdate();
             }
           }, 4500); // Збільшено з 3500 до 4500
+
+          // Third screenshot after another 1.5 seconds
+          setTimeout(() => {
+            if (sessionInfo.onScreenshotUpdate) {
+              console.log(
+                `[${userId}] Third CAPTCHA screenshot update for final state`,
+              );
+              sessionInfo.onScreenshotUpdate();
+            }
+          }, 6000); // 4.5 + 1.5 = 6 seconds total
         }
       });
 
@@ -193,6 +243,16 @@ export class SessionService {
               sessionInfo.onScreenshotUpdate();
             }
           }, 2000); // Збільшено з 1000 до 2000
+
+          // Additional screenshot after 1.5 more seconds
+          setTimeout(() => {
+            if (sessionInfo.onScreenshotUpdate) {
+              console.log(
+                `[${userId}] Additional CAPTCHA response screenshot update`,
+              );
+              sessionInfo.onScreenshotUpdate();
+            }
+          }, 3500); // 2 + 1.5 = 3.5 seconds total
         }
       });
 
@@ -332,6 +392,16 @@ export class SessionService {
             sessionInfo.onScreenshotUpdate();
           }
         }, 3000); // 1.5 + 1.5 = 3 seconds total
+
+        // Third screenshot after another 1.5 seconds for final state
+        setTimeout(() => {
+          if (sessionInfo.onScreenshotUpdate) {
+            console.log(
+              `[${userId}] Third screenshot update for final DOM state`,
+            );
+            sessionInfo.onScreenshotUpdate();
+          }
+        }, 4500); // 3 + 1.5 = 4.5 seconds total
       });
 
       // Auto-cleanup after 20 minutes

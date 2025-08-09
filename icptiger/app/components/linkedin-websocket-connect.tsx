@@ -749,8 +749,7 @@ export default function LinkedInWebSocketConnect({
                   maxWidth: "100%",
                   display: "block",
                 }}
-                onMouseDown={handleCanvasClick}
-                onMouseUp={handleCanvasClick}
+                onClick={handleCanvasClick}
                 onMouseMove={handleCanvasMouseMove}
                 onWheel={handleScroll}
                 onKeyDown={handleKeyPress}

@@ -35,7 +35,7 @@ export class PuppeteerService implements OnModuleInit {
       }
 
       const browserOptions = {
-        headless: false,
+        headless: true,
         executablePath: config.executablePath,
         args: [
           '--no-sandbox',

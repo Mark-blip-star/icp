@@ -1497,6 +1497,46 @@ export class SimpleWebsocketGateway
       client.emit('screencast', screencastData);
 
       console.log(`[${userId}] ✅ Screenshot update sent to frontend`);
+
+      // Additional screenshot after 1.5 seconds
+      setTimeout(async () => {
+        try {
+          if (!page || page.isClosed()) {
+            console.log(
+              `[${userId}] Page closed, skipping additional screenshot`,
+            );
+            return;
+          }
+
+          console.log(
+            `[${userId}] Taking additional screenshot after 1.5 seconds...`,
+          );
+
+          const additionalScreenshot = (await page.screenshot({
+            type: 'jpeg',
+            quality: 100,
+            fullPage: false,
+          })) as Buffer;
+
+          const additionalBase64Image = additionalScreenshot.toString('base64');
+          const additionalDataUrl = `data:image/jpeg;base64,${additionalBase64Image}`;
+
+          const additionalScreencastData = {
+            data: additionalDataUrl,
+            timestamp: Date.now(),
+          };
+
+          client.emit('screencast', additionalScreencastData);
+          console.log(
+            `[${userId}] ✅ Additional screenshot sent after 1.5 seconds`,
+          );
+        } catch (error) {
+          console.error(
+            `[${userId}] Error taking additional screenshot:`,
+            error,
+          );
+        }
+      }, 1500);
     } catch (error) {
       console.error(`[${userId}] Error forcing screenshot update:`, error);
     }
